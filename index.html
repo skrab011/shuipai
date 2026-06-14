@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shui Pai">
+<meta name="theme-color" content="#1a1208">
+<title>Shui Pai</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;700&family=Noto+Sans+SC:wght@300;400&display=swap');
+
+  :root {
+    --ink:       #1a1208;
+    --ink-soft:  #3d2e14;
+    --paper:     #f0e8d5;
+    --paper-dark:#e2d5b8;
+    --wash:      #c8b98a;
+    --red:       #8b2020;
+    --gold:      #b8943f;
+    --tile-bg:   #f5edd8;
+    --tile-border:#a08840;
+    --tile-shadow:rgba(26,18,8,0.35);
+    --tile-selected: #d4e8c2;
+    --tile-hint: #e8d4a0;
+    --gap: 4px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--ink);
+    font-family: 'Noto Sans SC', sans-serif;
+    color: var(--paper);
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+
+  /* ── Screens ── */
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .screen.hidden { display: none; }
+
+  /* ── Title Screen ── */
+  #title-screen {
+    background: var(--ink);
+    gap: 0;
+  }
+  .title-art {
+    width: 100%;
+    max-width: 340px;
+    padding: 24px 32px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .title-kanji {
+    font-family: 'Noto Serif SC', serif;
+    font-size: clamp(72px, 20vw, 96px);
+    font-weight: 700;
+    color: var(--paper);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    text-shadow: 3px 4px 0 var(--red), 6px 8px 20px rgba(139,32,32,0.4);
+  }
+  .title-pinyin {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    color: var(--wash);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+  .title-divider {
+    width: 60px;
+    height: 1px;
+    background: var(--gold);
+    margin: 20px 0 16px;
+    opacity: 0.6;
+  }
+  .title-sub {
+    font-size: 11px;
+    color: var(--wash);
+    letter-spacing: 0.2em;
+    opacity: 0.7;
+  }
+  .title-tiles-preview {
+    display: flex;
+    gap: 8px;
+    margin: 32px 0 40px;
+  }
+  .preview-tile {
+    width: 48px; height: 64px;
+    background: var(--tile-bg);
+    border: 1.5px solid var(--tile-border);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Noto Serif SC', serif;
+    font-size: 28px;
+    color: var(--ink);
+    box-shadow: 2px 3px 8px var(--tile-shadow);
+    animation: float 3s ease-in-out infinite;
+  }
+  .preview-tile:nth-child(2) { animation-delay: 0.5s; }
+  .preview-tile:nth-child(3) { animation-delay: 1s; }
+  .preview-tile:nth-child(4) { animation-delay: 1.5s; }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .btn-primary {
+    background: var(--red);
+    color: var(--paper);
+    border: none;
+    border-radius: 4px;
+    padding: 14px 48px;
+    font-family: 'Noto Serif SC', serif;
+    font-size: 16px;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(139,32,32,0.4);
+    transition: transform 0.1s, box-shadow 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-primary:active { transform: scale(0.97); box-shadow: 0 2px 8px rgba(139,32,32,0.3); }
+  .level-display {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--wash);
+    letter-spacing: 0.15em;
+    opacity: 0.6;
+  }
+
+  /* ── Game Screen ── */
+  #game-screen {
+    background: var(--ink);
+    padding: 0;
+    justify-content: flex-start;
+  }
+
+  .top-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 8px;
+    flex-shrink: 0;
+  }
+  .top-bar-left { display: flex; flex-direction: column; }
+  .level-label {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 18px;
+    color: var(--paper);
+    letter-spacing: 0.05em;
+  }
+  .pairs-label {
+    font-size: 11px;
+    color: var(--wash);
+    letter-spacing: 0.1em;
+    margin-top: 1px;
+  }
+  .top-bar-right { display: flex; gap: 10px; align-items: center; }
+  .icon-btn {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    color: var(--paper);
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+  }
+  .icon-btn:active { background: rgba(255,255,255,0.15); }
+
+  .board-wrapper {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 4px 8px 8px;
+  }
+
+  #board {
+    display: grid;
+    /* columns set dynamically */
+    gap: var(--gap);
+  }
+
+  /* ── Tile ── */
+  .tile {
+    width: 100%;
+    aspect-ratio: 3/4;
+    background: var(--tile-bg);
+    border: 1.5px solid var(--tile-border);
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    position: relative;
+    box-shadow: 1px 2px 5px var(--tile-shadow);
+    transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .tile:active { transform: scale(0.94); }
+  .tile.selected {
+    background: var(--tile-selected);
+    border-color: #5a8a3a;
+    box-shadow: 0 0 0 2px #5a8a3a, 1px 2px 5px var(--tile-shadow);
+  }
+  .tile.hint-glow {
+    background: var(--tile-hint);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px var(--gold), 1px 2px 5px var(--tile-shadow);
+    animation: hint-pulse 1s ease-in-out 3;
+  }
+  @keyframes hint-pulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+  }
+  .tile.matched {
+    animation: match-out 0.35s ease-in forwards;
+  }
+  @keyframes match-out {
+    0% { transform: scale(1.05); opacity: 1; }
+    60% { transform: scale(1.12); opacity: 0.6; }
+    100% { transform: scale(0); opacity: 0; }
+  }
+  .tile.empty {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    pointer-events: none;
+    cursor: default;
+  }
+  .tile-symbol {
+    font-family: 'Noto Serif SC', serif;
+    font-size: clamp(14px, 4.5vw, 30px);
+    line-height: 1;
+    color: var(--ink);
+    pointer-events: none;
+  }
+  .tile-symbol.red-sym { color: var(--red); }
+  .tile-corner {
+    position: absolute;
+    top: 3px; left: 4px;
+    font-size: clamp(6px, 1.8vw, 10px);
+    color: var(--ink-soft);
+    font-family: 'Noto Serif SC', serif;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  /* ── Win / Fail overlay ── */
+  .overlay {
+    position: absolute; inset: 0;
+    background: rgba(26,18,8,0.88);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px;
+    z-index: 10;
+    backdrop-filter: blur(3px);
+  }
+  .overlay.hidden { display: none; }
+  .overlay-kanji {
+    font-family: 'Noto Serif SC', serif;
+    font-size: clamp(64px, 18vw, 96px);
+    font-weight: 700;
+    color: var(--paper);
+    text-shadow: 3px 4px 0 var(--red);
+    animation: pop-in 0.4s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  .overlay-kanji.win-color { text-shadow: 3px 4px 0 #3a6a20; color: #d4f0b8; }
+  @keyframes pop-in {
+    from { transform: scale(0.5); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+  .overlay-sub {
+    font-size: 13px;
+    color: var(--wash);
+    letter-spacing: 0.2em;
+    margin-bottom: 8px;
+  }
+  .overlay-btns { display: flex; gap: 12px; }
+  .btn-sec {
+    background: transparent;
+    color: var(--paper);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 4px;
+    padding: 10px 24px;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+  }
+  .btn-sec:active { background: rgba(255,255,255,0.1); }
+
+  /* ── Progress bar ── */
+  .progress-bar-wrap {
+    width: calc(100% - 32px);
+    height: 3px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    margin: 0 16px 4px;
+    flex-shrink: 0;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--gold);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(26,18,8,0.92);
+    border: 1px solid var(--gold);
+    color: var(--paper);
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+    z-index: 20;
+    white-space: nowrap;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ TITLE SCREEN ═══════════════ -->
+<div id="title-screen" class="screen">
+  <div class="title-art">
+    <div class="title-kanji">水牌</div>
+    <div class="title-pinyin">Shui Pái</div>
+    <div class="title-divider"></div>
+    <div class="title-sub">tile matching</div>
+  </div>
+  <div class="title-tiles-preview">
+    <div class="preview-tile">竹</div>
+    <div class="preview-tile">風</div>
+    <div class="preview-tile">花</div>
+    <div class="preview-tile">龍</div>
+  </div>
+  <button class="btn-primary" id="start-btn">開始</button>
+  <div class="level-display" id="title-level">Level 1</div>
+</div>
+
+<!-- ═══════════════ GAME SCREEN ═══════════════ -->
+<div id="game-screen" class="screen hidden">
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="level-label" id="level-label">Level 1</div>
+      <div class="pairs-label" id="pairs-label">— pairs remaining</div>
+    </div>
+    <div class="top-bar-right">
+      <div class="icon-btn" id="hint-btn" title="Hint">💡</div>
+      <div class="icon-btn" id="menu-btn" title="Menu">≡</div>
+    </div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+  <div class="board-wrapper">
+    <div id="board"></div>
+  </div>
+
+  <!-- Win overlay -->
+  <div class="overlay hidden" id="win-overlay">
+    <div class="overlay-kanji win-color">勝</div>
+    <div class="overlay-sub">level complete</div>
+    <div class="overlay-btns">
+      <button class="btn-sec" id="next-btn">Next Level →</button>
+    </div>
+  </div>
+
+  <!-- Stuck overlay -->
+  <div class="overlay hidden" id="stuck-overlay">
+    <div class="overlay-kanji">止</div>
+    <div class="overlay-sub">no moves remain</div>
+    <div class="overlay-btns">
+      <button class="btn-sec" id="shuffle-retry-btn">Shuffle</button>
+      <button class="btn-sec" id="restart-btn">Restart</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  TILE DEFINITIONS
+// ══════════════════════════════════════════════════
+const SUITS = [
+  // Characters (万)
+  { sym:'一',corner:'萬',red:false },{ sym:'二',corner:'萬',red:false },{ sym:'三',corner:'萬',red:false },
+  { sym:'四',corner:'萬',red:false },{ sym:'五',corner:'萬',red:false },{ sym:'六',corner:'萬',red:false },
+  { sym:'七',corner:'萬',red:false },{ sym:'八',corner:'萬',red:false },{ sym:'九',corner:'萬',red:false },
+  // Bamboo (竹)
+  { sym:'竹',corner:'一',red:false },{ sym:'竹',corner:'二',red:false },{ sym:'竹',corner:'三',red:false },
+  { sym:'竹',corner:'四',red:false },{ sym:'竹',corner:'五',red:false },{ sym:'竹',corner:'六',red:false },
+  { sym:'竹',corner:'七',red:false },{ sym:'竹',corner:'八',red:false },{ sym:'竹',corner:'九',red:false },
+  // Circles (圓)
+  { sym:'○',corner:'一',red:false },{ sym:'○',corner:'二',red:false },{ sym:'○',corner:'三',red:false },
+  { sym:'○',corner:'四',red:false },{ sym:'○',corner:'五',red:false },{ sym:'○',corner:'六',red:false },
+  { sym:'○',corner:'七',red:false },{ sym:'○',corner:'八',red:false },{ sym:'○',corner:'九',red:false },
+  // Winds
+  { sym:'東',corner:'風',red:true },{ sym:'南',corner:'風',red:true },
+  { sym:'西',corner:'風',red:true },{ sym:'北',corner:'風',red:true },
+  // Dragons
+  { sym:'中',corner:'龍',red:true },{ sym:'發',corner:'龍',red:false },{ sym:'白',corner:'龍',red:false },
+  // Flowers / specials
+  { sym:'花',corner:'',red:true },{ sym:'月',corner:'',red:false },
+  { sym:'水',corner:'',red:false },{ sym:'雲',corner:'',red:false },
+];
+
+// ══════════════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════════════
+let state = {
+  level: 1,
+  grid: [],       // flat array of {id, typeIndex, matched, el}
+  cols: 0,
+  rows: 0,
+  selected: null,
+  totalPairs: 0,
+  matchedPairs: 0,
+};
+
+// Load saved level
+const saved = parseInt(localStorage.getItem('shuipai_level') || '1', 10);
+state.level = isNaN(saved) ? 1 : Math.max(1, saved);
+
+// ══════════════════════════════════════════════════
+//  SEEDED RNG  (so same level seed = same board)
+// ══════════════════════════════════════════════════
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function seededShuffle(arr, rng) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ══════════════════════════════════════════════════
+//  BOARD GENERATION
+// ══════════════════════════════════════════════════
+function boardSizeForLevel(level) {
+  // Gently ramp up. Tiles must be even.
+  if (level <= 3)  return { cols: 6, rows: 5  }; // 30 → 15 pairs
+  if (level <= 8)  return { cols: 8, rows: 5  }; // 40 → 20 pairs
+  if (level <= 15) return { cols: 8, rows: 7  }; // 56 → 28 pairs
+  if (level <= 25) return { cols:10, rows: 7  }; // 70 → 35 pairs
+  if (level <= 40) return { cols:10, rows: 8  }; // 80 → 40 pairs
+  return              { cols:12, rows: 8  }; // 96 → 48 pairs
+}
+
+function generateBoard(level) {
+  const rng = mulberry32(level * 2654435761);
+  const { cols, rows } = boardSizeForLevel(level);
+  const totalCells = cols * rows;
+  const totalPairs = Math.floor(totalCells / 2);
+
+  // Pick tile types (repeating as needed, at least 2 of each)
+  const typePool = [];
+  const typeCount = SUITS.length;
+  for (let i = 0; i < totalPairs; i++) {
+    typePool.push(i % typeCount);
+  }
+  // Duplicate each for pairs
+  const tileTypes = [];
+  typePool.forEach(t => { tileTypes.push(t); tileTypes.push(t); });
+  seededShuffle(tileTypes, rng);
+
+  // If totalCells is odd, last cell is empty
+  const grid = [];
+  for (let i = 0; i < totalCells; i++) {
+    grid.push({
+      id: i,
+      typeIndex: tileTypes[i] !== undefined ? tileTypes[i] : -1,
+      matched: tileTypes[i] === undefined,
+      el: null,
+    });
+  }
+
+  return { grid, cols, rows, totalPairs };
+}
+
+// Ensure at least one valid pair exists (solvability hint check)
+function findMatchingPair(grid, cols) {
+  const visible = grid.filter(t => !t.matched);
+  for (let i = 0; i < visible.length; i++) {
+    for (let j = i + 1; j < visible.length; j++) {
+      if (visible[i].typeIndex === visible[j].typeIndex) {
+        if (canConnect(grid, cols, visible[i].id, visible[j].id)) {
+          return [visible[i].id, visible[j].id];
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// ══════════════════════════════════════════════════
+//  CONNECTION LOGIC  (2-bend path, Mahjong Solitaire style)
+// ══════════════════════════════════════════════════
+function canConnect(grid, cols, idA, idB) {
+  const rows = Math.ceil(grid.length / cols);
+  const rA = Math.floor(idA / cols), cA = idA % cols;
+  const rB = Math.floor(idB / cols), cB = idB % cols;
+
+  function isFree(r, c) {
+    if (r < 0 || r >= rows || c < 0 || c >= cols) return true; // outside = open
+    const cell = grid[r * cols + c];
+    return cell.matched;
+  }
+
+  // Can we walk a straight line from (r1,c1) to (r2,c2)?
+  function lineOpen(r1, c1, r2, c2) {
+    if (r1 === r2) {
+      const minC = Math.min(c1, c2), maxC = Math.max(c1, c2);
+      for (let c = minC + 1; c < maxC; c++) if (!isFree(r1, c)) return false;
+      return true;
+    }
+    if (c1 === c2) {
+      const minR = Math.min(r1, r2), maxR = Math.max(r1, r2);
+      for (let r = minR + 1; r < maxR; r++) if (!isFree(r, c1)) return false;
+      return true;
+    }
+    return false;
+  }
+
+  // Direct line
+  if (lineOpen(rA, cA, rB, cB)) return true;
+
+  // One bend: through corner (rA, cB) or (rB, cA)
+  if (isFree(rA, cB) && lineOpen(rA, cA, rA, cB) && lineOpen(rA, cB, rB, cB)) return true;
+  if (isFree(rB, cA) && lineOpen(rA, cA, rB, cA) && lineOpen(rB, cA, rB, cB)) return true;
+
+  // Two bends: extend lines from A and B into open border space
+  // Horizontal extension from both
+  const extendedCols = [-1, cols]; // outside columns
+  for (const ec of extendedCols) {
+    if (lineOpen(rA, cA, rA, ec) && lineOpen(rB, cB, rB, ec) &&
+        lineOpen(rA, ec, rB, ec)) return true;
+  }
+  const extendedRows = [-1, rows];
+  for (const er of extendedRows) {
+    if (lineOpen(rA, cA, er, cA) && lineOpen(rB, cB, er, cB) &&
+        lineOpen(er, cA, er, cB)) return true;
+  }
+
+  // General two-bend: try every row and column as bend point
+  for (let r = 0; r < rows; r++) {
+    if (isFree(r, cA) && isFree(r, cB) &&
+        lineOpen(rA, cA, r, cA) && lineOpen(r, cA, r, cB) && lineOpen(r, cB, rB, cB)) return true;
+  }
+  for (let c = 0; c < cols; c++) {
+    if (isFree(rA, c) && isFree(rB, c) &&
+        lineOpen(rA, cA, rA, c) && lineOpen(rA, c, rB, c) && lineOpen(rB, c, rB, cB)) return true;
+  }
+
+  return false;
+}
+
+// ══════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  const { grid, cols } = state;
+
+  // Calculate tile size to fit viewport
+  const wrapper = document.querySelector('.board-wrapper');
+  const wW = wrapper.clientWidth - 16;
+  const wH = wrapper.clientHeight - 8;
+  const rows = Math.ceil(grid.length / cols);
+  const gap = 4;
+  const tileW = Math.floor((wW - (cols - 1) * gap) / cols);
+  const tileH = Math.floor((wH - (rows - 1) * gap) / rows);
+  // Maintain 3:4 ratio, pick smaller dimension
+  const byWidth = tileW;
+  const byHeight = Math.floor(tileH * 3 / 4);
+  const tileSize = Math.min(byWidth, byHeight);
+
+  board.style.gridTemplateColumns = `repeat(${cols}, ${tileSize}px)`;
+  board.style.gap = gap + 'px';
+
+  grid.forEach((cell, i) => {
+    const el = document.createElement('div');
+    el.className = 'tile' + (cell.matched ? ' empty' : '');
+    el.style.width = tileSize + 'px';
+    el.dataset.id = i;
+
+    if (!cell.matched) {
+      const def = SUITS[cell.typeIndex];
+      el.innerHTML = `
+        <span class="tile-corner">${def.corner}</span>
+        <span class="tile-symbol${def.red ? ' red-sym' : ''}">${def.sym}</span>
+      `;
+      el.addEventListener('click', () => onTileClick(i));
+    }
+
+    cell.el = el;
+    board.appendChild(el);
+  });
+
+  updateUI();
+}
+
+function updateUI() {
+  const rem = state.totalPairs - state.matchedPairs;
+  document.getElementById('pairs-label').textContent = `${rem} pair${rem !== 1 ? 's' : ''} remaining`;
+  document.getElementById('level-label').textContent = `Level ${state.level}`;
+  const pct = state.totalPairs > 0 ? (state.matchedPairs / state.totalPairs) * 100 : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('title-level').textContent = `Level ${state.level}`;
+}
+
+// ══════════════════════════════════════════════════
+//  INTERACTION
+// ══════════════════════════════════════════════════
+function onTileClick(id) {
+  const cell = state.grid[id];
+  if (cell.matched) return;
+  if (state.selected === null) {
+    state.selected = id;
+    cell.el.classList.add('selected');
+    return;
+  }
+  if (state.selected === id) {
+    cell.el.classList.remove('selected');
+    state.selected = null;
+    return;
+  }
+  const selCell = state.grid[state.selected];
+  // Check match
+  if (selCell.typeIndex !== cell.typeIndex) {
+    // Wrong type — swap selection
+    selCell.el.classList.remove('selected');
+    state.selected = id;
+    cell.el.classList.add('selected');
+    return;
+  }
+  // Check connectivity
+  if (!canConnect(state.grid, state.cols, state.selected, id)) {
+    selCell.el.classList.remove('selected');
+    state.selected = id;
+    cell.el.classList.add('selected');
+    showToast('No path between those tiles');
+    return;
+  }
+  // Match!
+  selCell.el.classList.remove('selected');
+  selCell.el.classList.add('matched');
+  cell.el.classList.add('matched');
+  state.selected = null;
+  setTimeout(() => {
+    selCell.matched = true;
+    selCell.el.className = 'tile empty';
+    selCell.el.innerHTML = '';
+    cell.matched = true;
+    cell.el.className = 'tile empty';
+    cell.el.innerHTML = '';
+    state.matchedPairs++;
+    updateUI();
+    checkWin();
+  }, 360);
+}
+
+function checkWin() {
+  if (state.matchedPairs >= state.totalPairs) {
+    setTimeout(() => {
+      document.getElementById('win-overlay').classList.remove('hidden');
+    }, 200);
+    return;
+  }
+  // Check for any valid moves
+  const pair = findMatchingPair(state.grid, state.cols);
+  if (!pair) {
+    setTimeout(() => {
+      document.getElementById('stuck-overlay').classList.remove('hidden');
+    }, 400);
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  HINT
+// ══════════════════════════════════════════════════
+function showHint() {
+  // Clear existing
+  state.grid.forEach(c => c.el && c.el.classList.remove('hint-glow', 'selected'));
+  state.selected = null;
+  const pair = findMatchingPair(state.grid, state.cols);
+  if (!pair) { showToast('No moves available'); return; }
+  pair.forEach(id => state.grid[id].el.classList.add('hint-glow'));
+  setTimeout(() => pair.forEach(id => state.grid[id].el && state.grid[id].el.classList.remove('hint-glow')), 3100);
+}
+
+// ══════════════════════════════════════════════════
+//  SHUFFLE remaining tiles
+// ══════════════════════════════════════════════════
+function shuffleRemaining() {
+  const rng = mulberry32(Date.now());
+  const alive = state.grid.filter(c => !c.matched);
+  const types = alive.map(c => c.typeIndex);
+  seededShuffle(types, rng);
+  alive.forEach((c, i) => { c.typeIndex = types[i]; });
+  state.selected = null;
+  renderBoard();
+  showToast('Tiles shuffled');
+}
+
+// ══════════════════════════════════════════════════
+//  LEVEL MANAGEMENT
+// ══════════════════════════════════════════════════
+function startLevel(level) {
+  state.level = level;
+  localStorage.setItem('shuipai_level', level);
+  const { grid, cols, rows, totalPairs } = generateBoard(level);
+  state.grid = grid;
+  state.cols = cols;
+  state.rows = rows;
+  state.totalPairs = totalPairs;
+  state.matchedPairs = 0;
+  state.selected = null;
+  document.getElementById('win-overlay').classList.add('hidden');
+  document.getElementById('stuck-overlay').classList.add('hidden');
+  document.getElementById('title-screen').classList.add('hidden');
+  document.getElementById('game-screen').classList.remove('hidden');
+  renderBoard();
+}
+
+// ══════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ══════════════════════════════════════════════════
+//  EVENT LISTENERS
+// ══════════════════════════════════════════════════
+document.getElementById('start-btn').addEventListener('click', () => startLevel(state.level));
+document.getElementById('hint-btn').addEventListener('click', showHint);
+document.getElementById('menu-btn').addEventListener('click', () => {
+  document.getElementById('win-overlay').classList.add('hidden');
+  document.getElementById('stuck-overlay').classList.add('hidden');
+  document.getElementById('game-screen').classList.add('hidden');
+  document.getElementById('title-screen').classList.remove('hidden');
+  updateUI();
+});
+document.getElementById('next-btn').addEventListener('click', () => startLevel(state.level + 1));
+document.getElementById('restart-btn').addEventListener('click', () => startLevel(state.level));
+document.getElementById('shuffle-retry-btn').addEventListener('click', () => {
+  document.getElementById('stuck-overlay').classList.add('hidden');
+  shuffleRemaining();
+});
+
+// Resize handler
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (!document.getElementById('game-screen').classList.contains('hidden')) {
+      renderBoard();
+    }
+  }, 150);
+});
+
+// Init title display
+updateUI();
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
