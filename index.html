@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shui Pai">
+<meta name="theme-color" content="#0d1117">
+<title>水牌 Shui Pai</title>
+<link rel="manifest" href="manifest.json">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700;900&family=Noto+Sans+SC:wght@300;400&display=swap');
+
+:root {
+  --bg:           #0d1117;
+  --bg-surface:   #161b22;
+  --paper:        #e8dcc8;
+  --paper-dim:    #9a8e78;
+  --red:          #c0392b;
+  --red-dark:     #7a1a12;
+  --gold:         #c9a84c;
+
+  /* Tile face */
+  --tile-face:    #c8b888;
+  --tile-face-hi: #d8c898;
+  --tile-border:  #6a5428;
+  --tile-edge-r:  #4a3818;  /* right 3D edge */
+  --tile-edge-b:  #3a2c10;  /* bottom 3D edge */
+  --tile-shadow:  rgba(0,0,0,0.7);
+
+  /* Tile back */
+  --tile-back:    #2a3a50;
+  --tile-back-hi: #3a4f6a;
+  --tile-back-border: #1a2a3a;
+
+  /* States */
+  --sel-glow:     #4a9a2a;
+  --hint-glow:    #c9a84c;
+  --danger-glow:  #c0392b;
+
+  /* Tray */
+  --tray-bg:      #0a0f18;
+  --tray-border:  #1e2d42;
+
+  --edge-w: 5px;   /* 3D edge thickness */
+  --radius: 12px;  /* large border radius */
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  font-family: 'Noto Sans SC', sans-serif;
+  color: var(--paper);
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-font-smoothing: antialiased;
+}
+
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.screen.hidden { display: none; }
+
+/* ═══════════════════════════════════
+   TITLE SCREEN
+═══════════════════════════════════ */
+#title-screen { background: var(--bg); }
+
+.title-art {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.title-kanji {
+  font-family: 'Noto Serif SC', serif; font-weight: 900;
+  font-size: clamp(84px, 22vw, 110px);
+  color: var(--paper); line-height: 1; letter-spacing: -0.02em;
+  text-shadow: 5px 6px 0 var(--red-dark), 0 0 50px rgba(192,57,43,0.25);
+}
+.title-pinyin {
+  font-size: 11px; font-weight: 300; letter-spacing: 0.38em;
+  text-transform: uppercase; color: var(--paper-dim);
+}
+.title-rule {
+  width: 44px; height: 1px; background: var(--gold);
+  opacity: 0.45; margin: 16px 0 12px;
+}
+.title-sub { font-size: 10px; color: var(--paper-dim); letter-spacing: 0.2em; opacity: 0.55; }
+
+.title-preview {
+  display: flex; gap: 12px; margin: 28px 0 32px;
+}
+/* Preview tiles use the same 3D tile structure */
+.ptile {
+  position: relative;
+  width: 50px; height: 66px;
+  animation: float 3s ease-in-out infinite;
+}
+.ptile:nth-child(2) { animation-delay:.5s; }
+.ptile:nth-child(3) { animation-delay:1s; }
+.ptile:nth-child(4) { animation-delay:1.5s; }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+.ptile .t-face {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, var(--tile-face-hi) 0%, var(--tile-face) 100%);
+  border: 2px solid var(--tile-border);
+  border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Noto Serif SC', serif; font-size: 26px; font-weight: 900;
+  color: #2a1a04;
+  box-shadow: 3px 4px 12px var(--tile-shadow);
+  z-index: 2;
+}
+.ptile .t-edge-r {
+  position: absolute; top: var(--edge-w); right: calc(-1 * var(--edge-w));
+  width: var(--edge-w);
+  bottom: calc(-1 * var(--edge-w));
+  background: var(--tile-edge-r);
+  border-radius: 0 4px 4px 0;
+  z-index: 1;
+}
+.ptile .t-edge-b {
+  position: absolute; bottom: calc(-1 * var(--edge-w)); left: var(--edge-w);
+  height: var(--edge-w);
+  right: calc(-1 * var(--edge-w));
+  background: var(--tile-edge-b);
+  border-radius: 0 0 4px 4px;
+  z-index: 1;
+}
+
+.btn-primary {
+  background: var(--red); color: var(--paper);
+  border: none; border-radius: var(--radius);
+  padding: 14px 52px;
+  font-family: 'Noto Serif SC', serif; font-size: 17px; font-weight: 700;
+  letter-spacing: 0.18em; cursor: pointer;
+  box-shadow: 0 4px 22px rgba(192,57,43,0.45);
+  transition: transform .1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-primary:active { transform: scale(0.97); }
+
+.level-display {
+  margin-top: 16px; font-size: 11px;
+  color: var(--paper-dim); letter-spacing: 0.14em; opacity: 0.5;
+}
+
+/* ═══════════════════════════════════
+   GAME SCREEN
+═══════════════════════════════════ */
+#game-screen { background: var(--bg); justify-content: flex-start; }
+
+.top-bar {
+  width: 100%; display: flex; align-items: center;
+  justify-content: space-between; padding: 10px 14px 6px; flex-shrink: 0;
+}
+.top-bar-left { display: flex; flex-direction: column; }
+.level-label {
+  font-family: 'Noto Serif SC', serif; font-size: 17px; font-weight: 700;
+  color: var(--paper); letter-spacing: 0.05em;
+}
+.pairs-label { font-size: 10px; color: var(--paper-dim); letter-spacing: 0.1em; margin-top: 1px; }
+.top-bar-right { display: flex; gap: 8px; align-items: center; }
+.icon-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; color: var(--paper);
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s;
+}
+.icon-btn:active { background: rgba(255,255,255,0.14); }
+
+/* ── Tray ── */
+.tray-section {
+  width: 100%; flex-shrink: 0;
+  padding: 4px 14px 6px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.tray-label {
+  font-size: 9px; color: var(--paper-dim); letter-spacing: 0.18em;
+  text-transform: uppercase; opacity: 0.45;
+}
+.tray { display: flex; gap: 8px; align-items: center; }
+
+.tray-slot {
+  flex: 1; max-width: 70px;
+  aspect-ratio: 3/4;
+  position: relative;
+}
+/* empty slot bg */
+.tray-slot-bg {
+  position: absolute; inset: 0;
+  background: var(--tray-bg);
+  border: 1.5px dashed var(--tray-border);
+  border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+}
+.tray-slot-num { font-size: 10px; color: var(--tray-border); opacity: 0.5; }
+
+/* tray tile (same 3D structure, smaller) */
+.tray-tile {
+  position: absolute; inset: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tray-tile .t-face {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, var(--tile-face-hi) 0%, var(--tile-face) 100%);
+  border: 2px solid var(--tile-border);
+  border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2; overflow: hidden;
+}
+.tray-tile .t-edge-r {
+  position: absolute; top: var(--edge-w); right: calc(-1 * var(--edge-w));
+  width: var(--edge-w); bottom: calc(-1 * var(--edge-w));
+  background: var(--tile-edge-r); border-radius: 0 4px 4px 0; z-index: 1;
+}
+.tray-tile .t-edge-b {
+  position: absolute; bottom: calc(-1 * var(--edge-w)); left: var(--edge-w);
+  height: var(--edge-w); right: calc(-1 * var(--edge-w));
+  background: var(--tile-edge-b); border-radius: 0 0 4px 4px; z-index: 1;
+}
+.tray-tile.match-clear { animation: match-out .35s ease-in forwards; }
+.tray-tile.danger-flash { animation: danger-shake .5s ease-in-out; }
+@keyframes danger-shake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(2px); }
+}
+
+/* ── Progress ── */
+.progress-bar-wrap {
+  width: calc(100% - 28px); height: 2px;
+  background: rgba(255,255,255,0.07); border-radius: 2px;
+  margin: 0 14px 4px; flex-shrink: 0;
+}
+.progress-bar-fill {
+  height: 100%; background: var(--gold); border-radius: 2px;
+  transition: width .4s ease;
+}
+
+/* ── Board ── */
+.board-wrapper {
+  flex: 1; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; padding: 4px 10px 8px;
+  position: relative;
+}
+#board {
+  position: relative;
+  /* sized dynamically */
+}
+
+/* ═══════════════════════════════════
+   3D TILE  (the core visual unit)
+═══════════════════════════════════ */
+.tile {
+  position: absolute;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter .15s;
+  /* width/height/left/top set in JS */
+}
+.tile.blocked { cursor: default; filter: brightness(0.7); }
+.tile.free { cursor: pointer; }
+
+/* face wrapper — handles flip */
+.tile-inner {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(.4,0,.2,1);
+}
+.tile.face-down .tile-inner { transform: rotateY(180deg); }
+
+/* front face */
+.t-face {
+  position: absolute; inset: 0;
+  background: linear-gradient(145deg, var(--tile-face-hi) 0%, var(--tile-face) 60%);
+  border: 2px solid var(--tile-border);
+  border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  backface-visibility: hidden;
+  z-index: 2; overflow: hidden;
+}
+/* subtle inner bevel */
+.t-face::before {
+  content: '';
+  position: absolute; inset: 3px;
+  border-radius: calc(var(--radius) - 3px);
+  border: 1px solid rgba(255,255,255,0.18);
+  pointer-events: none;
+}
+
+/* back face */
+.t-back {
+  position: absolute; inset: 0;
+  background: linear-gradient(145deg, var(--tile-back-hi) 0%, var(--tile-back) 60%);
+  border: 2px solid var(--tile-back-border);
+  border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  backface-visibility: hidden;
+  transform: rotateY(180deg);
+  z-index: 2;
+}
+.t-back::before {
+  content: '';
+  position: absolute; inset: 4px;
+  border-radius: calc(var(--radius) - 4px);
+  border: 1px solid rgba(255,255,255,0.08);
+  background: repeating-linear-gradient(
+    45deg,
+    transparent, transparent 4px,
+    rgba(255,255,255,0.03) 4px, rgba(255,255,255,0.03) 5px
+  );
+  pointer-events: none;
+}
+.t-back-glyph {
+  font-family: 'Noto Serif SC', serif; font-weight: 900;
+  font-size: 1.4em; color: rgba(255,255,255,0.12);
+  pointer-events: none; user-select: none;
+}
+
+/* right 3D edge */
+.t-edge-r {
+  position: absolute;
+  top: var(--edge-w); right: calc(-1 * var(--edge-w));
+  width: var(--edge-w); bottom: calc(-1 * var(--edge-w));
+  background: linear-gradient(to right, var(--tile-edge-r), var(--tile-edge-b));
+  border-radius: 0 5px 5px 0;
+  z-index: 1;
+  backface-visibility: hidden;
+}
+/* bottom 3D edge */
+.t-edge-b {
+  position: absolute;
+  bottom: calc(-1 * var(--edge-w)); left: var(--edge-w);
+  height: var(--edge-w); right: calc(-1 * var(--edge-w));
+  background: linear-gradient(to bottom, var(--tile-edge-b), #28200a);
+  border-radius: 0 0 5px 5px;
+  z-index: 1;
+  backface-visibility: hidden;
+}
+
+/* tile symbols */
+.tile-symbol {
+  font-family: 'Noto Serif SC', serif; font-weight: 900;
+  line-height: 1; color: #1e1004;
+  pointer-events: none; user-select: none;
+}
+.tile-symbol.red-sym { color: var(--red-dark); }
+.tile-corner {
+  position: absolute; top: 4px; left: 5px;
+  font-family: 'Noto Serif SC', serif; font-weight: 700;
+  color: #1e1004; opacity: 0.4;
+  pointer-events: none; user-select: none;
+}
+
+/* selected state */
+.tile.selected .t-face {
+  background: linear-gradient(145deg, #c8e8a8 0%, #a8c888 60%);
+  border-color: var(--sel-glow);
+  box-shadow: 0 0 0 2px var(--sel-glow);
+}
+/* hint state */
+.tile.hint-glow .t-face {
+  background: linear-gradient(145deg, #e8d898 0%, #c8b860 60%);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold);
+  animation: hint-pulse 1s ease-in-out 3;
+}
+@keyframes hint-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+
+/* face-up-revealed state (flipped but not yet sent to tray) */
+.tile.revealed .t-face {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1.5px var(--gold);
+}
+
+/* match clear */
+.tile.match-clear { animation: match-out .32s ease-in forwards; z-index: 20; }
+@keyframes match-out {
+  0%   { transform: scale(1.05); opacity: 1; }
+  50%  { transform: scale(1.12); opacity: 0.6; }
+  100% { transform: scale(0.2); opacity: 0; }
+}
+
+/* ═══════════════════════════════════
+   OVERLAYS
+═══════════════════════════════════ */
+.overlay {
+  position: absolute; inset: 0;
+  background: rgba(10,14,20,0.92);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 12px; z-index: 100;
+  backdrop-filter: blur(5px);
+}
+.overlay.hidden { display: none; }
+.overlay-kanji {
+  font-family: 'Noto Serif SC', serif; font-weight: 900;
+  font-size: clamp(80px, 22vw, 112px);
+  color: var(--paper);
+  text-shadow: 5px 6px 0 var(--red-dark);
+  animation: pop-in .4s cubic-bezier(.34,1.56,.64,1) both;
+}
+.overlay-kanji.win { color: #c0f0a0; text-shadow: 5px 6px 0 #1a5010; }
+@keyframes pop-in { from{transform:scale(.4);opacity:0} to{transform:scale(1);opacity:1} }
+.overlay-sub { font-size: 12px; color: var(--paper-dim); letter-spacing: 0.22em; margin-bottom: 6px; }
+.overlay-btns { display: flex; gap: 12px; }
+.btn-sec {
+  background: transparent; color: var(--paper);
+  border: 1px solid rgba(255,255,255,0.22); border-radius: 8px;
+  padding: 11px 24px;
+  font-family: 'Noto Sans SC', sans-serif; font-size: 12px; letter-spacing: 0.1em;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background .15s;
+}
+.btn-sec:active { background: rgba(255,255,255,0.1); }
+
+/* ─── Toast ─── */
+#toast {
+  position: fixed; bottom: 34px; left: 50%;
+  transform: translateX(-50%) translateY(14px);
+  background: rgba(10,14,20,0.95); border: 1px solid var(--gold);
+  color: var(--paper); padding: 9px 18px; border-radius: 8px;
+  font-size: 12px; letter-spacing: 0.1em;
+  opacity: 0; transition: opacity .3s, transform .3s;
+  pointer-events: none; z-index: 200; white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ═══════ TITLE ═══════ -->
+<div id="title-screen" class="screen">
+  <div class="title-art">
+    <div class="title-kanji">水牌</div>
+    <div class="title-pinyin">Shui Pái</div>
+    <div class="title-rule"></div>
+    <div class="title-sub">tile matching</div>
+  </div>
+  <div class="title-preview">
+    <div class="ptile">
+      <div class="t-face"><span style="font-family:'Noto Serif SC',serif;font-weight:900;font-size:26px;color:#1e1004">竹</span></div>
+      <div class="t-edge-r"></div><div class="t-edge-b"></div>
+    </div>
+    <div class="ptile">
+      <div class="t-face"><span style="font-family:'Noto Serif SC',serif;font-weight:900;font-size:26px;color:#1e1004">風</span></div>
+      <div class="t-edge-r"></div><div class="t-edge-b"></div>
+    </div>
+    <div class="ptile">
+      <div class="t-face"><span style="font-family:'Noto Serif SC',serif;font-weight:900;font-size:26px;color:#7a1a12">花</span></div>
+      <div class="t-edge-r"></div><div class="t-edge-b"></div>
+    </div>
+    <div class="ptile">
+      <div class="t-face"><span style="font-family:'Noto Serif SC',serif;font-weight:900;font-size:26px;color:#1e1004">龍</span></div>
+      <div class="t-edge-r"></div><div class="t-edge-b"></div>
+    </div>
+  </div>
+  <button class="btn-primary" id="start-btn">開始</button>
+  <div class="level-display" id="title-level">Level 1</div>
+</div>
+
+<!-- ═══════ GAME ═══════ -->
+<div id="game-screen" class="screen hidden">
+
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="level-label" id="level-label">Level 1</div>
+      <div class="pairs-label" id="pairs-label">— pairs remaining</div>
+    </div>
+    <div class="top-bar-right">
+      <div class="icon-btn" id="hint-btn">💡</div>
+      <div class="icon-btn" id="menu-btn">≡</div>
+    </div>
+  </div>
+
+  <div class="tray-section">
+    <div class="tray-label">holding tray</div>
+    <div class="tray" id="tray">
+      <div class="tray-slot" data-slot="0"><div class="tray-slot-bg"><span class="tray-slot-num">1</span></div></div>
+      <div class="tray-slot" data-slot="1"><div class="tray-slot-bg"><span class="tray-slot-num">2</span></div></div>
+      <div class="tray-slot" data-slot="2"><div class="tray-slot-bg"><span class="tray-slot-num">3</span></div></div>
+      <div class="tray-slot" data-slot="3"><div class="tray-slot-bg"><span class="tray-slot-num">4</span></div></div>
+    </div>
+  </div>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+
+  <div class="board-wrapper">
+    <div id="board"></div>
+  </div>
+
+  <div class="overlay hidden" id="win-overlay">
+    <div class="overlay-kanji win">勝</div>
+    <div class="overlay-sub">level complete</div>
+    <div class="overlay-btns">
+      <button class="btn-sec" id="next-btn">Next Level →</button>
+    </div>
+  </div>
+  <div class="overlay hidden" id="stuck-overlay">
+    <div class="overlay-kanji">止</div>
+    <div class="overlay-sub">no moves remain</div>
+    <div class="overlay-btns">
+      <button class="btn-sec" id="shuffle-btn">Shuffle</button>
+      <button class="btn-sec" id="restart-btn">Restart</button>
+    </div>
+  </div>
+  <div class="overlay hidden" id="fail-overlay">
+    <div class="overlay-kanji">敗</div>
+    <div class="overlay-sub">tray is full — no match</div>
+    <div class="overlay-btns">
+      <button class="btn-sec" id="fail-restart-btn">Try Again</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════
+//  TILE DEFINITIONS
+// ══════════════════════════════════════════════════
+const SUITS = [
+  {sym:'一',corner:'萬',red:false},{sym:'二',corner:'萬',red:false},{sym:'三',corner:'萬',red:false},
+  {sym:'四',corner:'萬',red:false},{sym:'五',corner:'萬',red:false},{sym:'六',corner:'萬',red:false},
+  {sym:'七',corner:'萬',red:false},{sym:'八',corner:'萬',red:false},{sym:'九',corner:'萬',red:false},
+  {sym:'竹',corner:'一',red:false},{sym:'林',corner:'二',red:false},{sym:'森',corner:'三',red:false},
+  {sym:'木',corner:'四',red:false},{sym:'桂',corner:'五',red:false},{sym:'梅',corner:'六',red:false},
+  {sym:'松',corner:'七',red:false},{sym:'柳',corner:'八',red:false},{sym:'桃',corner:'九',red:false},
+  {sym:'日',corner:'○',red:false},{sym:'月',corner:'○',red:false},{sym:'星',corner:'○',red:false},
+  {sym:'雲',corner:'○',red:false},{sym:'山',corner:'○',red:false},{sym:'川',corner:'○',red:false},
+  {sym:'火',corner:'○',red:true },{sym:'水',corner:'○',red:false},{sym:'土',corner:'○',red:false},
+  {sym:'東',corner:'風',red:true },{sym:'南',corner:'風',red:true },
+  {sym:'西',corner:'風',red:true },{sym:'北',corner:'風',red:true },
+  {sym:'中',corner:'龍',red:true },{sym:'發',corner:'龍',red:false},{sym:'白',corner:'龍',red:false},
+  {sym:'花',corner:'季',red:true },{sym:'鳥',corner:'季',red:false},
+  {sym:'魚',corner:'季',red:false},{sym:'蝶',corner:'季',red:true },
+];
+
+// ══════════════════════════════════════════════════
+//  LAYOUT DEFINITIONS  (layer stacks)
+//  Each entry: { col, row, layer }  (0-indexed)
+//  Tiles on higher layers sit on top of lower-layer tiles at same col/row
+// ══════════════════════════════════════════════════
+function buildLayout(level) {
+  const tiles = [];
+  // Ramp up board density with level
+  const cols = level <= 3 ? 6 : level <= 10 ? 8 : level <= 20 ? 10 : 12;
+  const rows = level <= 3 ? 5 : level <= 10 ? 6 : level <= 20 ? 7  : 8;
+  const layers = level <= 5 ? 1 : level <= 15 ? 2 : level <= 30 ? 3 : 4;
+
+  // Fill flat grid first
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      tiles.push({ col: c, row: r, layer: 0 });
+    }
+  }
+
+  // Add stacked layers (centered, shrinking)
+  for (let l = 1; l < layers; l++) {
+    const shrink = l;
+    const r0 = shrink, r1 = rows - shrink;
+    const c0 = shrink, c1 = cols - shrink;
+    for (let r = r0; r < r1; r++) {
+      for (let c = c0; c < c1; c++) {
+        // Only stack on even grid positions to avoid half-offset complexity
+        if ((r + c) % 2 === 0) {
+          tiles.push({ col: c, row: r, layer: l });
+        }
+      }
+    }
+  }
+
+  return { tiles, cols, rows, layers };
+}
+
+// ══════════════════════════════════════════════════
+//  RNG
+// ══════════════════════════════════════════════════
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function seededShuffle(arr, rng) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ══════════════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════════════
+const STORAGE_KEY = 'shuipai_level_v2';
+
+let G = {
+  level: 1,
+  tiles: [],        // array of tile objects
+  tray: [null,null,null,null],  // each: null or {typeIndex, tileId}
+  totalPairs: 0,
+  matchedPairs: 0,
+  cols: 0, rows: 0,
+  tileW: 0, tileH: 0,  // pixel size
+  revealedId: null,     // id of a face-down tile currently flipped face-up
+};
+
+// Load saved level (robust)
+(function loadSavedLevel() {
+  try {
+    const v = parseInt(localStorage.getItem(STORAGE_KEY) || '1', 10);
+    G.level = (!isNaN(v) && v >= 1) ? v : 1;
+  } catch(e) { G.level = 1; }
+})();
+
+function saveLevel() {
+  try { localStorage.setItem(STORAGE_KEY, String(G.level)); } catch(e){}
+}
+
+// ══════════════════════════════════════════════════
+//  TILE OBJECT
+// ══════════════════════════════════════════════════
+// tile: { id, col, row, layer, typeIndex, matched, inTray, faceDown, revealed, el }
+function makeTile(id, col, row, layer, typeIndex, faceDown) {
+  return { id, col, row, layer, typeIndex, matched:false, inTray:false, faceDown, revealed:false, el:null };
+}
+
+// ══════════════════════════════════════════════════
+//  GENERATE LEVEL
+// ══════════════════════════════════════════════════
+function generateLevel(level) {
+  const rng = mulberry32(level * 2654435761 + 987654321);
+  const { tiles: positions, cols, rows } = buildLayout(level);
+  const total = positions.length;
+  const pairs = Math.floor(total / 2);
+  const usedCount = pairs * 2;
+
+  // Assign type indices in pairs
+  const typeCount = SUITS.length;
+  const pool = Array.from({length: pairs}, (_, i) => i % typeCount);
+  const types = [];
+  pool.forEach(t => { types.push(t); types.push(t); });
+  seededShuffle(types, rng);
+
+  // Face-down ratio ramps up with level
+  const faceDownRatio = Math.min(0.5, Math.max(0, (level - 5) * 0.04));
+
+  const tiles = positions.slice(0, usedCount).map((pos, i) => {
+    const faceDown = rng() < faceDownRatio;
+    return makeTile(i, pos.col, pos.row, pos.layer, types[i], faceDown);
+  });
+
+  return { tiles, cols, rows, totalPairs: pairs };
+}
+
+// ══════════════════════════════════════════════════
+//  FREE TILE CHECK (3D stacking rules)
+// ══════════════════════════════════════════════════
+function isTileFree(tile) {
+  if (tile.matched || tile.inTray) return false;
+
+  // Nothing on top of this tile
+  const hasAbove = G.tiles.some(t =>
+    !t.matched && !t.inTray &&
+    t.layer === tile.layer + 1 &&
+    t.col === tile.col && t.row === tile.row
+  );
+  if (hasAbove) return false;
+
+  // At least one horizontal side free (left or right column unoccupied at same layer)
+  const leftBlocked = G.tiles.some(t =>
+    !t.matched && !t.inTray &&
+    t.layer === tile.layer &&
+    t.col === tile.col - 1 && t.row === tile.row
+  );
+  const rightBlocked = G.tiles.some(t =>
+    !t.matched && !t.inTray &&
+    t.layer === tile.layer &&
+    t.col === tile.col + 1 && t.row === tile.row
+  );
+
+  // Free if either side is open (or it's on the edge)
+  return !leftBlocked || !rightBlocked;
+}
+
+// ══════════════════════════════════════════════════
+//  RENDER BOARD
+// ══════════════════════════════════════════════════
+const EDGE = 5; // px, matches --edge-w
+
+function calcTileSize() {
+  const wrapper = document.querySelector('.board-wrapper');
+  const wW = wrapper.clientWidth - 20;
+  const wH = wrapper.clientHeight - 10;
+  const maxLayer = Math.max(...G.tiles.map(t => t.layer), 0);
+  // Account for 3D edges bleeding right/down per layer
+  const edgeBleed = maxLayer * EDGE;
+  const byW = Math.floor((wW - edgeBleed) / (G.cols + 0.5));
+  const byH = Math.floor((wH - edgeBleed) / (G.rows + 0.5) * 3 / 4);
+  const size = Math.max(18, Math.min(byW, byH));
+  return { tileW: size, tileH: Math.floor(size * 4 / 3) };
+}
+
+function tilePixelPos(tile) {
+  // Layer offset: higher layers shift up-left slightly (classic mahjong look)
+  const layerOffX = tile.layer * -2;
+  const layerOffY = tile.layer * -3;
+  return {
+    x: tile.col * (G.tileW + 4) + layerOffX,
+    y: tile.row * (G.tileH + 4) + layerOffY,
+    z: tile.layer,
+  };
+}
+
+function renderBoard() {
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+
+  const { tileW, tileH } = calcTileSize();
+  G.tileW = tileW; G.tileH = tileH;
+
+  // Board container size
+  const maxLayer = Math.max(...G.tiles.map(t => t.layer), 0);
+  const bW = G.cols * (tileW + 4) + maxLayer * 6 + EDGE + 4;
+  const bH = G.rows * (tileH + 4) + maxLayer * 6 + EDGE + 4;
+  boardEl.style.width  = bW + 'px';
+  boardEl.style.height = bH + 'px';
+
+  // Sort tiles back-to-front so higher layers render on top
+  const sorted = [...G.tiles].sort((a, b) => a.layer - b.layer || a.row - b.row || a.col - b.col);
+
+  sorted.forEach(tile => {
+    if (tile.matched) return;
+
+    const el = document.createElement('div');
+    el.className = 'tile';
+    el.dataset.id = tile.id;
+
+    const { x, y, z } = tilePixelPos(tile);
+    el.style.left   = x + 'px';
+    el.style.top    = y + 'px';
+    el.style.width  = tileW + 'px';
+    el.style.height = tileH + 'px';
+    el.style.zIndex = z * 10 + (tile.inTray ? 0 : 1);
+
+    const free = isTileFree(tile);
+    el.classList.toggle('blocked', !free && !tile.inTray);
+    el.classList.toggle('free', free);
+    if (tile.faceDown && !tile.revealed) el.classList.add('face-down');
+    if (tile.revealed) el.classList.add('revealed');
+    if (tile.inTray) el.style.opacity = '0.3';
+
+    const def = SUITS[tile.typeIndex];
+    const symSize = Math.max(10, Math.floor(tileW * 0.58));
+    const cornerSize = Math.max(6, Math.floor(tileW * 0.18));
+
+    el.innerHTML = `
+      <div class="tile-inner">
+        <div class="t-face">
+          <span class="tile-corner" style="font-size:${cornerSize}px">${def.corner}</span>
+          <span class="tile-symbol${def.red?' red-sym':''}" style="font-size:${symSize}px">${def.sym}</span>
+        </div>
+        <div class="t-back">
+          <span class="t-back-glyph" style="font-size:${Math.floor(tileW*0.55)}px">水</span>
+        </div>
+      </div>
+      <div class="t-edge-r" style="top:${EDGE}px;right:-${EDGE}px;width:${EDGE}px;bottom:-${EDGE}px"></div>
+      <div class="t-edge-b" style="bottom:-${EDGE}px;left:${EDGE}px;height:${EDGE}px;right:-${EDGE}px"></div>
+    `;
+
+    if (free && !tile.inTray) {
+      el.addEventListener('click', () => onTileClick(tile.id));
+    }
+
+    tile.el = el;
+    boardEl.appendChild(el);
+  });
+
+  renderTray();
+  updateUI();
+}
+
+// ══════════════════════════════════════════════════
+//  TRAY RENDER
+// ══════════════════════════════════════════════════
+function renderTray() {
+  const slots = document.querySelectorAll('.tray-slot');
+  const slotEl = document.querySelector('.tray-slot');
+  const slotH = slotEl ? slotEl.offsetHeight : 48;
+  const symSize = Math.max(12, Math.floor(slotH * 0.42));
+  const cornerSize = Math.max(6, Math.floor(slotH * 0.15));
+
+  slots.forEach((slot, i) => {
+    const item = G.tray[i];
+    // Keep bg div
+    slot.innerHTML = `<div class="tray-slot-bg"><span class="tray-slot-num">${i+1}</span></div>`;
+    if (item) {
+      const def = SUITS[item.typeIndex];
+      const ttEl = document.createElement('div');
+      ttEl.className = 'tray-tile';
+      ttEl.innerHTML = `
+        <div class="t-face">
+          <span class="tile-corner" style="font-size:${cornerSize}px">${def.corner}</span>
+          <span class="tile-symbol${def.red?' red-sym':''}" style="font-size:${symSize}px">${def.sym}</span>
+        </div>
+        <div class="t-edge-r" style="top:${EDGE}px;right:-${EDGE}px;width:${EDGE}px;bottom:-${EDGE}px"></div>
+        <div class="t-edge-b" style="bottom:-${EDGE}px;left:${EDGE}px;height:${EDGE}px;right:-${EDGE}px"></div>
+      `;
+      ttEl.addEventListener('click', () => returnFromTray(i));
+      slot.appendChild(ttEl);
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  TILE CLICK
+// ══════════════════════════════════════════════════
+function onTileClick(id) {
+  const tile = G.tiles[id];
+  if (!tile || tile.matched || tile.inTray) return;
+  if (!isTileFree(tile)) { showToast('That tile is blocked'); return; }
+
+  // ── Face-down tile: first tap flips it ──
+  if (tile.faceDown && !tile.revealed) {
+    // Flip back any previously revealed tile
+    if (G.revealedId !== null && G.revealedId !== id) {
+      const prev = G.tiles[G.revealedId];
+      if (prev && !prev.matched && !prev.inTray) {
+        prev.revealed = false;
+        if (prev.el) prev.el.classList.remove('revealed');
+        prev.el && prev.el.classList.add('face-down');
+      }
+      G.revealedId = null;
+    }
+    // Flip this one face-up
+    tile.revealed = true;
+    tile.el && tile.el.classList.remove('face-down');
+    tile.el && tile.el.classList.add('revealed');
+    G.revealedId = id;
+    return;
+  }
+
+  // ── Face-up (or already face-up after reveal): send to tray ──
+  // Clear revealed state
+  if (tile.revealed) {
+    tile.revealed = false;
+    G.revealedId = null;
+  }
+
+  // Flip back any other revealed tile since we're acting on this one
+  if (G.revealedId !== null && G.revealedId !== id) {
+    const prev = G.tiles[G.revealedId];
+    if (prev && !prev.matched && !prev.inTray) {
+      prev.revealed = false;
+      prev.el && prev.el.classList.remove('revealed');
+      prev.el && prev.el.classList.add('face-down');
+    }
+    G.revealedId = null;
+  }
+
+  sendToTray(id);
+}
+
+// ══════════════════════════════════════════════════
+//  SEND TILE TO TRAY
+// ══════════════════════════════════════════════════
+function sendToTray(id) {
+  const tile = G.tiles[id];
+  const emptySlot = G.tray.findIndex(s => s === null);
+  if (emptySlot === -1) { showToast('Tray is full'); return; }
+
+  tile.inTray = true;
+  tile.faceDown = false;
+  if (tile.el) tile.el.style.opacity = '0.3';
+  G.tray[emptySlot] = { typeIndex: tile.typeIndex, tileId: id };
+
+  // Refresh board to update free states (unblocking tiles beneath)
+  refreshFreeStates();
+  renderTray();
+  checkTrayMatch();
+}
+
+function refreshFreeStates() {
+  G.tiles.forEach(t => {
+    if (t.matched || t.inTray || !t.el) return;
+    const free = isTileFree(t);
+    t.el.classList.toggle('blocked', !free);
+    t.el.classList.toggle('free', free);
+    // Re-bind click only if free
+    t.el.onclick = free ? () => onTileClick(t.id) : null;
+  });
+  updateUI();
+}
+
+// ══════════════════════════════════════════════════
+//  RETURN TILE FROM TRAY
+// ══════════════════════════════════════════════════
+function returnFromTray(slotIdx) {
+  const item = G.tray[slotIdx];
+  if (!item) return;
+  const tile = G.tiles[item.tileId];
+  tile.inTray = false;
+  if (tile.el) tile.el.style.opacity = '';
+  G.tray[slotIdx] = null;
+  refreshFreeStates();
+  renderTray();
+}
+
+// ══════════════════════════════════════════════════
+//  CHECK TRAY MATCH
+// ══════════════════════════════════════════════════
+function checkTrayMatch() {
+  const filled = G.tray.map((s,i) => s ? i : -1).filter(i => i >= 0);
+
+  for (let a = 0; a < filled.length; a++) {
+    for (let b = a+1; b < filled.length; b++) {
+      const sA = G.tray[filled[a]], sB = G.tray[filled[b]];
+      if (sA && sB && sA.typeIndex === sB.typeIndex) {
+        const idxA = filled[a], idxB = filled[b];
+        // Animate tray slots
+        const slotEls = document.querySelectorAll('.tray-slot');
+        const ttA = slotEls[idxA].querySelector('.tray-tile');
+        const ttB = slotEls[idxB].querySelector('.tray-tile');
+        if (ttA) ttA.classList.add('match-clear');
+        if (ttB) ttB.classList.add('match-clear');
+
+        setTimeout(() => {
+          const tA = G.tiles[sA.tileId], tB = G.tiles[sB.tileId];
+          tA.matched = true; tA.inTray = false;
+          tB.matched = true; tB.inTray = false;
+          if (tA.el) { tA.el.style.opacity=''; tA.el.classList.add('match-clear'); }
+          if (tB.el) { tB.el.style.opacity=''; tB.el.classList.add('match-clear'); }
+          G.tray[idxA] = null;
+          G.tray[idxB] = null;
+          G.matchedPairs++;
+          setTimeout(() => {
+            if (tA.el) tA.el.remove();
+            if (tB.el) tB.el.remove();
+            refreshFreeStates();
+            renderTray();
+            checkWin();
+          }, 340);
+        }, 200);
+        return;
+      }
+    }
+  }
+
+  // No match — check if tray full (fail)
+  if (G.tray.every(s => s !== null)) {
+    const slotEls = document.querySelectorAll('.tray-slot .tray-tile');
+    slotEls.forEach(el => el.classList.add('danger-flash'));
+    setTimeout(() => {
+      document.getElementById('fail-overlay').classList.remove('hidden');
+    }, 700);
+  }
+
+  updateUI();
+}
+
+// ══════════════════════════════════════════════════
+//  WIN / STUCK CHECK
+// ══════════════════════════════════════════════════
+function checkWin() {
+  if (G.matchedPairs >= G.totalPairs) {
+    setTimeout(() => document.getElementById('win-overlay').classList.remove('hidden'), 300);
+    return;
+  }
+  // Check if any free tiles exist on board
+  const freeOnBoard = G.tiles.filter(t => !t.matched && !t.inTray && isTileFree(t));
+  const trayItems = G.tray.filter(Boolean);
+  const hasTrayMatch = trayItems.some((a,i) => trayItems.slice(i+1).some(b => a.typeIndex === b.typeIndex));
+
+  if (freeOnBoard.length === 0 && trayItems.length === 0) {
+    setTimeout(() => document.getElementById('stuck-overlay').classList.remove('hidden'), 400);
+  } else if (freeOnBoard.length === 0 && !hasTrayMatch && G.tray.every(s => s !== null)) {
+    // All slots full with no board moves and no tray match = stuck
+    setTimeout(() => document.getElementById('stuck-overlay').classList.remove('hidden'), 400);
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  HINT
+// ══════════════════════════════════════════════════
+function showHint() {
+  G.tiles.forEach(t => t.el && t.el.classList.remove('hint-glow'));
+
+  // Check tray for matches first
+  const trayItems = G.tray.map((s,i) => s ? {...s,slot:i} : null).filter(Boolean);
+  for (let a = 0; a < trayItems.length; a++) {
+    for (let b = a+1; b < trayItems.length; b++) {
+      if (trayItems[a].typeIndex === trayItems[b].typeIndex) {
+        const slots = document.querySelectorAll('.tray-slot .tray-tile');
+        [trayItems[a].slot, trayItems[b].slot].forEach(si => {
+          const s = document.querySelectorAll('.tray-slot')[si]?.querySelector('.tray-tile');
+          if (s) { s.classList.add('danger-flash'); setTimeout(()=>s.classList.remove('danger-flash'),1500); }
+        });
+        showToast('Match in your tray!');
+        return;
+      }
+    }
+  }
+
+  // Find two free matching tiles on board
+  const free = G.tiles.filter(t => !t.matched && !t.inTray && isTileFree(t) && !t.faceDown);
+  for (let i = 0; i < free.length; i++) {
+    for (let j = i+1; j < free.length; j++) {
+      if (free[i].typeIndex === free[j].typeIndex) {
+        [free[i], free[j]].forEach(t => {
+          if (t.el) {
+            t.el.classList.add('hint-glow');
+            setTimeout(() => t.el && t.el.classList.remove('hint-glow'), 3000);
+          }
+        });
+        return;
+      }
+    }
+  }
+  showToast('No visible moves — check face-down tiles');
+}
+
+// ══════════════════════════════════════════════════
+//  SHUFFLE
+// ══════════════════════════════════════════════════
+function shuffleBoard() {
+  const rng = mulberry32(Date.now());
+  const alive = G.tiles.filter(t => !t.matched && !t.inTray);
+  const types = alive.map(t => t.typeIndex);
+  seededShuffle(types, rng);
+  alive.forEach((t, i) => { t.typeIndex = types[i]; });
+  renderBoard();
+  showToast('Tiles shuffled');
+}
+
+// ══════════════════════════════════════════════════
+//  UI
+// ══════════════════════════════════════════════════
+function updateUI() {
+  const rem = G.totalPairs - G.matchedPairs;
+  document.getElementById('pairs-label').textContent = `${rem} pair${rem!==1?'s':''} remaining`;
+  document.getElementById('level-label').textContent = `Level ${G.level}`;
+  document.getElementById('title-level').textContent = `Level ${G.level}`;
+  const pct = G.totalPairs > 0 ? (G.matchedPairs / G.totalPairs) * 100 : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+// ══════════════════════════════════════════════════
+//  START LEVEL
+// ══════════════════════════════════════════════════
+function startLevel(level) {
+  G.level = Math.max(1, level);
+  saveLevel();
+
+  const { tiles, cols, rows, totalPairs } = generateLevel(G.level);
+  G.tiles = tiles;
+  G.cols = cols;
+  G.rows = rows;
+  G.totalPairs = totalPairs;
+  G.matchedPairs = 0;
+  G.tray = [null,null,null,null];
+  G.revealedId = null;
+
+  ['win-overlay','stuck-overlay','fail-overlay'].forEach(id =>
+    document.getElementById(id).classList.add('hidden')
+  );
+  document.getElementById('title-screen').classList.add('hidden');
+  document.getElementById('game-screen').classList.remove('hidden');
+
+  renderBoard();
+}
+
+// ══════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════
+let _toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ══════════════════════════════════════════════════
+//  EVENTS
+// ══════════════════════════════════════════════════
+document.getElementById('start-btn').addEventListener('click', () => startLevel(G.level));
+document.getElementById('hint-btn').addEventListener('click', showHint);
+document.getElementById('menu-btn').addEventListener('click', () => {
+  ['win-overlay','stuck-overlay','fail-overlay'].forEach(id =>
+    document.getElementById(id).classList.add('hidden')
+  );
+  document.getElementById('game-screen').classList.add('hidden');
+  document.getElementById('title-screen').classList.remove('hidden');
+  updateUI();
+});
+document.getElementById('next-btn').addEventListener('click', () => startLevel(G.level + 1));
+document.getElementById('restart-btn').addEventListener('click', () => startLevel(G.level));
+document.getElementById('fail-restart-btn').addEventListener('click', () => startLevel(G.level));
+document.getElementById('shuffle-btn').addEventListener('click', () => {
+  document.getElementById('stuck-overlay').classList.add('hidden');
+  shuffleBoard();
+});
+
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    if (!document.getElementById('game-screen').classList.contains('hidden')) renderBoard();
+  }, 150);
+});
+
+// ══════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════
+updateUI();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
