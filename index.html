@@ -70,7 +70,7 @@ html, body {
 .title-sub { font-size: 10px; color: var(--paper-dim); letter-spacing: 0.2em; opacity: 0.55; }
 .title-preview { display: flex; gap: 12px; margin: 28px 0 32px; }
 .ptile {
-  position: relative; width: 50px; height: 66px;
+  position: relative; width: 40px; height: 80px;
   animation: float 3s ease-in-out infinite;
 }
 .ptile:nth-child(2){animation-delay:.5s}
@@ -398,8 +398,8 @@ body.dark-theme .tile-corner { color: #aeaeb2; }
   </div>
 
   <div class="bottom-bar" style="display: flex; gap: 16px; padding: 0 14px 24px; justify-content: center; width: 100%;">
-    <button class="btn-sec" id="hint-btn">💡 Hint</button>
     <button class="btn-sec" id="shuffle-btn">🔀 Shuffle</button>
+    <button class="btn-sec" id="hint-btn">💡 Hint</button>
     <button class="btn-sec" id="undo-btn">↩️ Undo</button>
   </div>
 
@@ -606,7 +606,7 @@ function calcTileSize() {
   const bleedX = maxLayer * EDGE + maxLayer * 4;
   const bleedY = maxLayer * EDGE + maxLayer * 4;
   const byW = Math.floor((wW - bleedX) / (G.cols + 0.5 + (maxLayer * 0.5)));
-  const byH = Math.floor((wH - bleedY) / (G.rows + 0.5 + (maxLayer * 0.5)) * 3 / 4);
+  const byH = Math.floor((wH - bleedY) / (G.rows + 0.5 + (maxLayer * 0.5)) / 2);
   return { tileW: Math.max(16, Math.min(byW, byH)), tileH: 0 };
 }
 
@@ -614,7 +614,7 @@ function renderBoard() {
   const boardEl = document.getElementById('board');
   boardEl.innerHTML = '';
   const { tileW } = calcTileSize();
-  const tileH = Math.floor(tileW * 4 / 3);
+  const tileH = Math.floor(tileW * 2);
   G.tileW = tileW; G.tileH = tileH;
 
   const allCols = G.tiles.map(t => t.col);
@@ -683,8 +683,8 @@ function renderTray() {
 
   const wrapper = document.querySelector('.board-wrapper');
   const maxW = wrapper.clientWidth - 28;
-  const slotW = Math.min(64, Math.floor((maxW - 3 * 8) / 4));
-  const slotH = Math.floor(slotW * 4 / 3);
+  const slotW = Math.min(45, Math.floor((maxW - 3 * 8) / 4));
+  const slotH = Math.floor(slotW * 2);
   const symSize  = Math.max(10, Math.floor(slotW * 0.50));
   const crnSize  = Math.max(6,  Math.floor(slotW * 0.16));
 
@@ -893,160 +893,3 @@ function checkTrayMatch() {
 function refreshClickHandlers() {
   G.tiles.forEach(t => {
     if (t.matched || t.inTray || !t.el) return;
-    t.el.onclick = isTileFree(t) ? () => onTileClick(t.id) : null;
-  });
-}
-
-function checkWin() {
-  if (G.matchedPairs >= G.totalPairs) {
-    setTimeout(() => {
-      const timeTaken = Math.floor((Date.now() - G.startTime) / 1000);
-      const mins = Math.floor(timeTaken / 60);
-      const secs = timeTaken % 60;
-      let rating = "⭐⭐⭐";
-      if (timeTaken > G.totalPairs * 4) rating = "⭐⭐";
-      if (timeTaken > G.totalPairs * 8) rating = "⭐";
-      
-      document.getElementById('win-summary').innerHTML = 
-        `Time: ${mins}:${secs.toString().padStart(2, '0')}<br>Rating: ${rating}`;
-        
-      document.getElementById('win-overlay').classList.remove('hidden');
-    }, 300);
-    return;
-  }
-  const freeOnBoard = G.tiles.filter(t => !t.matched && !t.inTray && isTileFree(t));
-  const trayItems = G.tray.filter(Boolean);
-  const hasTrayMatch = trayItems.some((a, i) =>
-    trayItems.slice(i + 1).some(b => a.typeIndex === b.typeIndex)
-  );
-  if (freeOnBoard.length === 0 && !hasTrayMatch && trayItems.length === 0) {
-    setTimeout(() => document.getElementById('stuck-overlay').classList.remove('hidden'), 400);
-  }
-}
-
-function showHint() {
-  G.tiles.forEach(t => t.el && t.el.classList.remove('hint-glow'));
-  const trayItems = G.tray.map((s, i) => s ? { ...s, slot: i } : null).filter(Boolean);
-  for (let a = 0; a < trayItems.length; a++) {
-    for (let b = a + 1; b < trayItems.length; b++) {
-      if (trayItems[a].typeIndex === trayItems[b].typeIndex) {
-        const slots = document.querySelectorAll('.tray-slot');
-        [trayItems[a].slot, trayItems[b].slot].forEach(si => {
-          const tt = slots[si]?.querySelector('.tray-tile');
-          if (tt) { tt.classList.add('danger-flash'); setTimeout(() => tt.classList.remove('danger-flash'), 1500); }
-        });
-        showToast('Match in your tray!');
-        return;
-      }
-    }
-  }
-  const free = G.tiles.filter(t => !t.matched && !t.inTray && isTileFree(t) && !t.faceDown);
-  for (let i = 0; i < free.length; i++) {
-    for (let j = i + 1; j < free.length; j++) {
-      if (free[i].typeIndex === free[j].typeIndex) {
-        [free[i], free[j]].forEach(t => {
-          if (t.el) {
-            t.el.classList.add('hint-glow');
-            setTimeout(() => t.el && t.el.classList.remove('hint-glow'), 3000);
-          }
-        });
-        return;
-      }
-    }
-  }
-  showToast('No visible moves — check face-down tiles');
-}
-
-function shuffleBoard() {
-  const rng = mulberry32(Date.now());
-  const alive = G.tiles.filter(t => !t.matched && !t.inTray);
-  const types = alive.map(t => t.typeIndex);
-  seededShuffle(types, rng);
-  alive.forEach((t, i) => { t.typeIndex = types[i]; });
-  renderBoard();
-  showToast('Tiles shuffled');
-}
-
-function updateUI() {
-  const rem = G.totalPairs - G.matchedPairs;
-  document.getElementById('pairs-label').textContent = `${rem} pair${rem !== 1 ? 's' : ''} remaining`;
-  document.getElementById('level-label').textContent  = `Level ${G.level}`;
-  document.getElementById('title-level').textContent  = `Level ${G.level}`;
-  const pct = G.totalPairs > 0 ? (G.matchedPairs / G.totalPairs) * 100 : 0;
-  document.getElementById('progress-fill').style.width = pct + '%';
-}
-
-function startLevel(level) {
-  G.level = Math.max(1, level);
-  saveLevel();
-  const { tiles, cols, rows, totalPairs } = generateLevel(G.level);
-  G.tiles = tiles;
-  G.cols  = cols;
-  G.rows  = rows;
-  G.totalPairs   = totalPairs;
-  G.matchedPairs = 0;
-  G.tray = [null, null, null, null];
-  G.history = [];
-  G.startTime = Date.now();
-  G.revealedId = null;
-  ['win-overlay','stuck-overlay','fail-overlay','pause-overlay'].forEach(id =>
-    document.getElementById(id).classList.add('hidden')
-  );
-  document.getElementById('title-screen').classList.add('hidden');
-  document.getElementById('game-screen').classList.remove('hidden');
-  renderBoard();
-}
-
-let _tt;
-function showToast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(_tt);
-  _tt = setTimeout(() => el.classList.remove('show'), 2500);
-}
-
-document.getElementById('start-btn').addEventListener('click', () => startLevel(G.level));
-document.getElementById('hint-btn').addEventListener('click', showHint);
-document.getElementById('undo-btn').addEventListener('click', undoLastMove);
-document.getElementById('menu-btn').addEventListener('click', () => {
-  document.getElementById('pause-overlay').classList.remove('hidden');
-});
-document.getElementById('resume-btn').addEventListener('click', () => {
-  document.getElementById('pause-overlay').classList.add('hidden');
-});
-document.getElementById('theme-btn').addEventListener('click', () => {
-  document.body.classList.toggle('dark-theme');
-});
-document.getElementById('quit-btn').addEventListener('click', () => {
-  document.getElementById('pause-overlay').classList.add('hidden');
-  document.getElementById('game-screen').classList.add('hidden');
-  document.getElementById('title-screen').classList.remove('hidden');
-  updateUI();
-});
-
-const triggerShuffle = () => {
-  document.getElementById('stuck-overlay').classList.add('hidden');
-  shuffleBoard();
-};
-document.getElementById('shuffle-btn').addEventListener('click', triggerShuffle);
-document.getElementById('stuck-shuffle-btn')?.addEventListener('click', triggerShuffle);
-
-document.getElementById('next-btn').addEventListener('click', () => startLevel(G.level + 1));
-document.getElementById('restart-btn').addEventListener('click', () => startLevel(G.level));
-document.getElementById('fail-restart-btn').addEventListener('click', () => startLevel(G.level));
-
-let _rt;
-window.addEventListener('resize', () => {
-  clearTimeout(_rt);
-  _rt = setTimeout(() => {
-    if (!document.getElementById('game-screen').classList.contains('hidden')) renderBoard();
-  }, 150);
-});
-
-updateUI();
-if ('serviceWorker' in navigator)
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-</script>
-</body>
-</html>
