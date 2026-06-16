@@ -88,8 +88,8 @@ body {
      SVG encodes a classic seigaiha-inspired arc wave in the tray fill color (#1e2a42)
      at very low opacity so it reads as subtle texture, not wallpaper. */
   background-color: var(--bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='36'%3E%3Cg fill='none' stroke='%231e2a42' stroke-width='1.2'%3E%3C!-- bottom arc row --%3E%3Cellipse cx='0'  cy='36' rx='30' ry='18'/%3E%3Cellipse cx='60' cy='36' rx='30' ry='18'/%3E%3C!-- top arc row (offset half a cell) --%3E%3Cellipse cx='30' cy='18' rx='30' ry='18'/%3E%3C!-- inner detail arcs for layered depth --%3E%3Cellipse cx='0'  cy='36' rx='22' ry='13'/%3E%3Cellipse cx='60' cy='36' rx='22' ry='13'/%3E%3Cellipse cx='30' cy='18' rx='22' ry='13'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 60px 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='48'%3E%3Cg fill='%231e2a42' fill-opacity='0.55' stroke='%232a3d5a' stroke-width='1.5'%3E%3Cellipse cx='0'  cy='48' rx='40' ry='24'/%3E%3Cellipse cx='80' cy='48' rx='40' ry='24'/%3E%3Cellipse cx='40' cy='24' rx='40' ry='24'/%3E%3C/g%3E%3Cg fill='none' stroke='%232a3d5a' stroke-width='1'%3E%3Cellipse cx='0'  cy='48' rx='30' ry='18'/%3E%3Cellipse cx='80' cy='48' rx='30' ry='18'/%3E%3Cellipse cx='40' cy='24' rx='30' ry='18'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 80px 48px;
   font-family: 'Noto Sans SC', sans-serif;
   color: var(--paper); overflow: hidden;
   touch-action: manipulation;
@@ -756,9 +756,7 @@ function calcTileSize() {
 }
 
 function renderBoard() {
-  // Defer one frame so all flex chrome elements have painted and
-  // getBoundingClientRect() returns accurate heights before we measure.
-  requestAnimationFrame(_doRenderBoard);
+  _doRenderBoard();
 }
 
 function _doRenderBoard() {
@@ -858,55 +856,49 @@ function packTray() {
 
 // ══════════════════════════════════════════════════
 //  FLYING TILE ANIMATION
+//  Runs fire-and-forget — does NOT block interaction.
+//  Tile is removed from board and clicks re-enabled before animation ends.
 // ══════════════════════════════════════════════════
-function flyTileToTray(tile, targetSlotIndex, onDone) {
+function flyTileToTray(tile, targetSlotIndex) {
   const def = SUITS[tile.typeIndex];
-  if (!tile.el) { onDone(); return; }
+  if (!tile.el) return;
 
   const fromRect = tile.el.getBoundingClientRect();
-  // Get target tray slot
   const traySlots = document.querySelectorAll('.tray-slot');
-  if (!traySlots[targetSlotIndex]) { onDone(); return; }
+  if (!traySlots[targetSlotIndex]) return;
   const toRect = traySlots[targetSlotIndex].getBoundingClientRect();
-
-  // Hide source tile immediately
-  tile.el.style.opacity = '0';
 
   const fly = document.createElement('div');
   fly.className = 'tile-fly' + (def.red ? ' red-sym-fly' : '');
-  fly.style.width  = fromRect.width  + 'px';
-  fly.style.height = fromRect.height + 'px';
-  fly.style.left   = fromRect.left   + 'px';
-  fly.style.top    = fromRect.top    + 'px';
-  fly.style.fontSize = Math.max(8, Math.floor(fromRect.width * 0.42)) + 'px';
+  fly.style.cssText = `
+    width:${fromRect.width}px; height:${fromRect.height}px;
+    left:${fromRect.left}px; top:${fromRect.top}px;
+    font-size:${Math.max(8, Math.floor(fromRect.width * 0.42))}px;
+  `;
   fly.textContent = def.sym;
   document.body.appendChild(fly);
+
+  // Remove source tile immediately so board re-enables clicks right away
+  if (tile.el) { tile.el.remove(); tile.el = null; }
 
   const startX = fromRect.left, startY = fromRect.top;
   const endX   = toRect.left,   endY   = toRect.top;
   const startW = fromRect.width, startH = fromRect.height;
   const endW   = toRect.width,   endH   = toRect.height;
-
-  const duration = 380;
+  const duration = 200; // cut from 380ms to 200ms — snappy but still visible
   const startTime = performance.now();
 
   function step(now) {
     const p = Math.min(1, (now - startTime) / duration);
-    const ease = p < 0.5 ? 2*p*p : -1+(4-2*p)*p; // easeInOut
-    // Arc: lift halfway up
-    const arcY = -60 * Math.sin(p * Math.PI);
-    const x = startX + (endX - startX) * ease;
-    const y = startY + (endY - startY) * ease + arcY;
-    const w = startW + (endW - startW) * ease;
-    const h = startH + (endH - startH) * ease;
-    fly.style.left   = x + 'px';
-    fly.style.top    = y + 'px';
-    fly.style.width  = w + 'px';
-    fly.style.height = h + 'px';
-    fly.style.fontSize = Math.max(8, Math.floor(w * 0.42)) + 'px';
-    fly.style.opacity = p > 0.85 ? (1-(p-0.85)/0.15).toString() : '1';
+    const ease = p < 0.5 ? 2*p*p : -1+(4-2*p)*p;
+    const arcY = -30 * Math.sin(p * Math.PI); // smaller arc at faster speed
+    fly.style.left   = (startX + (endX - startX) * ease) + 'px';
+    fly.style.top    = (startY + (endY - startY) * ease + arcY) + 'px';
+    fly.style.width  = (startW + (endW - startW) * ease) + 'px';
+    fly.style.height = (startH + (endH - startH) * ease) + 'px';
+    fly.style.opacity = p > 0.8 ? (1-(p-0.8)/0.2).toString() : '1';
     if (p < 1) requestAnimationFrame(step);
-    else { fly.remove(); onDone(); }
+    else fly.remove();
   }
   requestAnimationFrame(step);
 }
@@ -949,19 +941,19 @@ function flipBackRevealed() {
 function sendToTray(id) {
   const tile = G.tiles[id];
   if (G.tray.filter(Boolean).length >= 4) { showToast('Tray is full'); return; }
-  tile.inTray  = true;
+  tile.inTray   = true;
   tile.faceDown = false;
   const slotIdx = G.tray.findIndex(s => s === null);
   G.tray[slotIdx] = { typeIndex: tile.typeIndex, tileId: id };
-  // Save undo
   G.undoStack.push({ typeIndex: tile.typeIndex, tileId: id, slotIdx });
 
-  flyTileToTray(tile, slotIdx, () => {
-    if (tile.el) { tile.el.remove(); tile.el = null; }
-    refreshClickHandlers();
-    renderTray();
-    checkTrayMatch();
-  });
+  // Fire animation (non-blocking — removes tile.el internally)
+  flyTileToTray(tile, slotIdx);
+
+  // Game logic runs immediately — no waiting for animation
+  refreshClickHandlers();
+  renderTray();
+  checkTrayMatch();
 }
 
 // ══════════════════════════════════════════════════
