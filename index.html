@@ -1,8 +1,15 @@
+<!-- ═══════════════════════════════════════════════════════════
+     水牌 Shui Pái  —  Tile Matching Game
+     Version: V4
+     Target:  iPhone 15 Pro Max, portrait, Safari / Firefox
+     Updated: tray sizing, tile clipping fix, circular power-ups,
+              explicit height layout, removed "holding tray" label
+════════════════════════════════════════════════════════════ -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Shui Pai">
@@ -72,7 +79,11 @@ html, body {
   background: var(--bg);
   font-family: 'Noto Sans SC', sans-serif;
   color: var(--paper); overflow: hidden;
-  touch-action: manipulation; -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
+  -webkit-font-smoothing: antialiased;
+  /* Honor iPhone 15 Pro Max safe areas (Dynamic Island + home bar) */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .screen {
   position: absolute; inset: 0;
@@ -146,19 +157,18 @@ html, body {
 /* ═══ TRAY ═══ */
 .tray-section {
   width: 100%; flex-shrink: 0;
-  padding: 2px 14px 4px;
-  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 4px 14px 4px;
+  display: flex; flex-direction: column; align-items: center;
 }
-.tray-label { font-size: 9px; color: var(--paper-dim); letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.4; }
 /* Outer container with border+fill wrapping only the slots */
 .tray-slots-wrap {
   display: flex; gap: 8px; justify-content: center; align-items: center;
   background: #161e2e;
   border: 1.5px solid #4a7fa8;
   border-radius: 14px;
-  padding: 7px 10px;
+  padding: 6px 10px;
 }
-.tray { display: contents; } /* tray div is now just a passthrough — slots render inside tray-slots-wrap */
+.tray { display: contents; }
 .tray-slot { flex-shrink: 0; position: relative; }
 .tray-slot-bg {
   position: absolute; inset: 0;
@@ -267,22 +277,27 @@ html, body {
 .bottom-bar {
   width: 100%; flex-shrink: 0;
   display: flex; justify-content: center; align-items: center;
-  gap: 16px; padding: 6px 14px 10px;
+  gap: 20px; padding: 4px 14px 8px;
 }
+/* Circular buttons: 54px diameter (72px * 0.75 = 54px) */
 .power-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 12px; padding: 10px 0; cursor: pointer;
-  -webkit-tap-highlight-color: transparent; transition: background .15s, transform .1s;
-  width: 72px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  background: #161e2e;
+  border: 1.5px solid #4a7fa8;
+  border-radius: 50%;
+  width: 54px; height: 54px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s, transform .1s;
+  flex-shrink: 0;
 }
-.power-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
+.power-btn:active { transform: scale(0.93); background: #1e2d42; }
 .power-btn.disabled { opacity: 0.35; cursor: default; }
 .power-btn.disabled:active { transform: none; }
-.power-icon { font-size: 22px; line-height: 1; }
+.power-icon { font-size: 18px; line-height: 1; }
 .power-count {
-  font-family: 'Noto Serif SC', serif; font-size: 14px; font-weight: 700; color: var(--gold);
-  min-width: 16px; text-align: center;
+  font-family: 'Noto Serif SC', serif; font-size: 12px; font-weight: 700; color: var(--gold);
+  line-height: 1;
 }
 
 /* ═══ OVERLAYS ═══ */
@@ -399,7 +414,6 @@ html, body {
   </div>
 
   <div class="tray-section">
-    <div class="tray-label">holding tray</div>
     <div class="tray-slots-wrap">
       <div class="tray" id="tray"></div>
     </div>
@@ -674,18 +688,52 @@ function isTileFree(tile) {
 // ══════════════════════════════════════════════════
 const EDGE=5, GAP=4;
 
+// Calculate available board area by explicitly subtracting all chrome elements
+// from total viewport height. This prevents the board-wrapper flex sizing
+// ambiguity that was causing tiles to be clipped.
+function calcAvailableBoard() {
+  const totalH = window.innerHeight;
+  const totalW = window.innerWidth;
+  // Measure actual rendered heights of every non-board element
+  const topBar    = document.querySelector('.top-bar');
+  const trayWrap  = document.querySelector('.tray-section');
+  const progBar   = document.querySelector('.progress-bar-wrap');
+  const bottomBar = document.querySelector('.bottom-bar');
+  const topBarH    = topBar    ? topBar.getBoundingClientRect().height    : 50;
+  const trayH      = trayWrap  ? trayWrap.getBoundingClientRect().height  : 60;
+  const progH      = progBar   ? progBar.getBoundingClientRect().height   : 8;
+  const bottomBarH = bottomBar ? bottomBar.getBoundingClientRect().height : 70;
+  // 16px total vertical padding inside board-wrapper
+  const boardPadV = 16;
+  const boardPadH = 20;
+  const availH = totalH - topBarH - trayH - progH - bottomBarH - boardPadV;
+  const availW = totalW - boardPadH;
+  return { availW: Math.max(availW, 100), availH: Math.max(availH, 100) };
+}
+
 function calcTileSize() {
-  const wr = document.querySelector('.board-wrapper');
-  const wW = wr.clientWidth - 20, wH = wr.clientHeight - 12;
-  const maxL = G.tiles.reduce((m,t) => Math.max(m,t.layer), 0);
+  const { availW, availH } = calcAvailableBoard();
+  const maxL  = G.tiles.reduce((m,t) => Math.max(m,t.layer), 0);
   const bleed = maxL * (EDGE + 4);
-  // 2:3 ratio (width:height) — so height = width * 3/2, solve for width: width = height * 2/3
-  const byW = Math.floor((wW - bleed) / (G.cols + 0.5 + maxL * 0.5));
-  const byH = Math.floor((wH - bleed) / (G.rows + 0.5 + maxL * 0.5) * 2 / 3);
-  return Math.max(16, Math.min(byW, byH));
+  // 2:3 ratio: tileH = tileW * 3/2
+  // Fit cols across availW:  tileW * cols + GAP*(cols-1) + bleed <= availW
+  //   => tileW <= (availW - GAP*(cols-1) - bleed) / cols
+  // Fit rows down availH:   tileH * rows + GAP*(rows-1) + bleed <= availH
+  //   tileH = tileW*1.5  => tileW <= (availH - GAP*(rows-1) - bleed) / (rows * 1.5)
+  const effectiveCols = G.cols + maxL * 0.5;
+  const effectiveRows = G.rows + maxL * 0.5;
+  const byW = Math.floor((availW - bleed - GAP*(effectiveCols-1)) / effectiveCols);
+  const byH = Math.floor((availH - bleed - GAP*(effectiveRows-1)) / effectiveRows / 1.5);
+  return Math.max(14, Math.min(byW, byH));
 }
 
 function renderBoard() {
+  // Defer one frame so all flex chrome elements have painted and
+  // getBoundingClientRect() returns accurate heights before we measure.
+  requestAnimationFrame(_doRenderBoard);
+}
+
+function _doRenderBoard() {
   const boardEl = document.getElementById('board');
   boardEl.innerHTML = '';
   const tW = calcTileSize();
@@ -728,22 +776,23 @@ function renderBoard() {
   });
   renderTray();
   updateUI();
-}
+} // end _doRenderBoard
 
 // ══════════════════════════════════════════════════
 //  TRAY RENDER
+//  Slot width = 1/2 of current board tile width
 // ══════════════════════════════════════════════════
 function renderTray() {
   const trayEl = document.getElementById('tray');
   trayEl.innerHTML = '';
   trayEl.style.display = 'flex';
-  trayEl.style.gap = '8px';
+  trayEl.style.gap = '6px';
   trayEl.style.alignItems = 'center';
-  const wr = document.querySelector('.board-wrapper');
-  const maxW = wr.clientWidth - 28;
-  const slotW = Math.min(60, Math.floor((maxW - 3*8) / 4));
+  // Slot = half the board tile width, same 2:3 ratio
+  const slotW = Math.max(18, Math.floor(G.tileW * 0.5));
   const slotH = Math.floor(slotW * 3 / 2);
-  const symS = Math.max(8, Math.floor(slotW*0.40)), crnS = Math.max(5, Math.floor(slotW*0.15));
+  const symS  = Math.max(7, Math.floor(slotW * 0.42));
+  const crnS  = Math.max(4, Math.floor(slotW * 0.16));
   for (let i = 0; i < 4; i++) {
     const slot = document.createElement('div');
     slot.className = 'tray-slot';
