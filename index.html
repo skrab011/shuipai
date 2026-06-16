@@ -1,9 +1,9 @@
 <!-- ═══════════════════════════════════════════════════════════
      水牌 Shui Pái  —  Tile Matching Game
-     Version: V4
-     Target:  iPhone 15 Pro Max, portrait, Safari / Firefox
-     Updated: tray sizing, tile clipping fix, circular power-ups,
-              explicit height layout, removed "holding tray" label
+     Version: V5
+     Target:  iPhone 15 Pro Max, portrait, Safari (bottom bar) / Firefox
+     Updated: Safari dvh fix, live timer centered top bar, power-up
+              button resize to 70px, lightened tray/buttons/tile faces
 ════════════════════════════════════════════════════════════ -->
 <!DOCTYPE html>
 <html lang="en">
@@ -32,8 +32,8 @@
   --edge-w:           5px;
   --radius:           12px;
   /* tile colors — overridden per theme */
-  --tile-face:        #c8b888;
-  --tile-face-hi:     #d8c898;
+  --tile-face:        #d8c8a0;
+  --tile-face-hi:     #e8d8b0;
   --tile-border:      #6a5428;
   --tile-edge-r:      #4a3818;
   --tile-edge-b:      #3a2c10;
@@ -44,38 +44,46 @@
   --tile-red:         #7a1a12;
   --tile-shadow:      rgba(0,0,0,0.7);
 }
-/* Theme: Ink (default warm amber) */
+/* Theme: Ink (default warm amber) — tile face lightened 15% */
 .theme-ink {
-  --tile-face:        #c8b888; --tile-face-hi:     #dac898;
+  --tile-face:        #d8c8a0; --tile-face-hi:     #e8d8b0;
   --tile-border:      #6a5428; --tile-edge-r:      #4a3818; --tile-edge-b: #3a2c10;
   --tile-back:        #2a3a50; --tile-back-hi:     #3a4f6a; --tile-back-border: #1a2a3a;
   --tile-ink:         #1e1004; --tile-red:         #8b1a10;
 }
-/* Theme: Lacquer — deep red and black */
+/* Theme: Lacquer — deep red and black, face lightened 15% */
 .theme-lacquer {
-  --tile-face:        #c0392b; --tile-face-hi:     #d44032;
+  --tile-face:        #d44a3a; --tile-face-hi:     #e05848;
   --tile-border:      #7a1010; --tile-edge-r:      #4a0808; --tile-edge-b: #380606;
   --tile-back:        #1a0808; --tile-back-hi:     #2a1010; --tile-back-border: #0a0404;
   --tile-ink:         #f5e6c8; --tile-red:         #f5e6c8;
 }
-/* Theme: Jade — deep green */
+/* Theme: Jade — deep green, face lightened 15% */
 .theme-jade {
-  --tile-face:        #2d6a4f; --tile-face-hi:     #3a8a64;
+  --tile-face:        #3a8060; --tile-face-hi:     #48a078;
   --tile-border:      #1a4a38; --tile-edge-r:      #0f3028; --tile-edge-b: #0a2018;
   --tile-back:        #0d2818; --tile-back-hi:     #1a3a28; --tile-back-border: #081808;
   --tile-ink:         #d4f0c8; --tile-red:         #f0c840;
 }
-/* Theme: Stone — cool grey slate */
+/* Theme: Stone — cool grey slate, face lightened 15% */
 .theme-stone {
-  --tile-face:        #7a8090; --tile-face-hi:     #8a90a0;
+  --tile-face:        #8e98a8; --tile-face-hi:     #9ea8b8;
   --tile-border:      #4a5060; --tile-edge-r:      #303840; --tile-edge-b: #202830;
   --tile-back:        #181e28; --tile-back-hi:     #242c38; --tile-back-border: #101418;
   --tile-ink:         #e8eaf0; --tile-red:         #e06050;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body {
-  width: 100%; height: 100%;
+html {
+  /* dvh = dynamic viewport height — shrinks when Safari's bottom address bar
+     is visible, expands when it hides. Falls back to 100% for older browsers. */
+  height: 100dvh;
+  height: 100%;
+}
+body {
+  width: 100%;
+  height: 100dvh;
+  height: 100%;
   background: var(--bg);
   font-family: 'Noto Sans SC', sans-serif;
   color: var(--paper); overflow: hidden;
@@ -142,9 +150,19 @@ html, body {
 .top-bar {
   width: 100%; display: flex; align-items: center;
   justify-content: space-between; padding: 10px 14px 4px; flex-shrink: 0;
+  position: relative;
 }
-.top-bar-left { display: flex; flex-direction: column; }
-.level-label { font-family: 'Noto Serif SC', serif; font-size: 17px; font-weight: 700; color: var(--paper); letter-spacing: 0.05em; }
+/* Timer centered absolutely so it doesn't shift with pause button */
+.top-bar-center {
+  position: absolute; left: 0; right: 0;
+  display: flex; justify-content: center; align-items: center;
+  pointer-events: none;
+}
+.level-timer {
+  font-family: 'Noto Serif SC', serif; font-size: 20px; font-weight: 700;
+  color: var(--paper); letter-spacing: 0.12em;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
 .top-bar-right { display: flex; gap: 8px; align-items: center; }
 .icon-btn {
   background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
@@ -163,8 +181,8 @@ html, body {
 /* Outer container with border+fill wrapping only the slots */
 .tray-slots-wrap {
   display: flex; gap: 8px; justify-content: center; align-items: center;
-  background: #161e2e;
-  border: 1.5px solid #4a7fa8;
+  background: #1e2a42;   /* #161e2e lightened ~15% */
+  border: 1.5px solid #6a9fc8;  /* #4a7fa8 lightened ~15% */
   border-radius: 14px;
   padding: 6px 10px;
 }
@@ -277,26 +295,28 @@ html, body {
 .bottom-bar {
   width: 100%; flex-shrink: 0;
   display: flex; justify-content: center; align-items: center;
-  gap: 20px; padding: 4px 14px 8px;
+  gap: 24px;
+  /* Use safe-area bottom + extra breathing room above home bar */
+  padding: 6px 14px calc(10px + env(safe-area-inset-bottom));
 }
-/* Circular buttons: 54px diameter (72px * 0.75 = 54px) */
+/* Circular buttons: 70px diameter, matching tray colors */
 .power-btn {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  background: #161e2e;
-  border: 1.5px solid #4a7fa8;
+  background: #1e2a42;       /* matches tray fill */
+  border: 1.5px solid #6a9fc8;  /* matches tray border */
   border-radius: 50%;
-  width: 54px; height: 54px;
+  width: 70px; height: 70px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background .15s, transform .1s;
   flex-shrink: 0;
 }
-.power-btn:active { transform: scale(0.93); background: #1e2d42; }
+.power-btn:active { transform: scale(0.93); background: #263652; }
 .power-btn.disabled { opacity: 0.35; cursor: default; }
 .power-btn.disabled:active { transform: none; }
-.power-icon { font-size: 18px; line-height: 1; }
+.power-icon { font-size: 22px; line-height: 1; }
 .power-count {
-  font-family: 'Noto Serif SC', serif; font-size: 12px; font-weight: 700; color: var(--gold);
+  font-family: 'Noto Serif SC', serif; font-size: 13px; font-weight: 700; color: var(--gold);
   line-height: 1;
 }
 
@@ -405,8 +425,8 @@ html, body {
 <!-- ═══ GAME ═══ -->
 <div id="game-screen" class="screen hidden theme-ink">
   <div class="top-bar">
-    <div class="top-bar-left">
-      <div class="level-label" id="level-label">Level 1</div>
+    <div class="top-bar-center">
+      <div class="level-timer" id="level-timer">0:00</div>
     </div>
     <div class="top-bar-right">
       <div class="icon-btn" id="pause-btn">⏸</div>
@@ -607,11 +627,12 @@ let G = {
   tiles: [], tray: [], totalPairs: 0, matchedPairs: 0,
   cols: 0, rows: 0, tileW: 0, tileH: 0,
   revealedId: null,
-  undoStack: [],  // [{typeIndex, tileId, slotIdx}] — last sent tile
+  undoStack: [],
   powerups: { hints:5, shuffles:5, undos:5 },
-  nextPowerupLevel: 0,  // level at which next powerup batch is awarded
+  nextPowerupLevel: 0,
   theme: THEMES[0],
   startTime: 0,
+  elapsedAtPause: 0,
   timerInterval: null,
 };
 
@@ -692,8 +713,10 @@ const EDGE=5, GAP=4;
 // from total viewport height. This prevents the board-wrapper flex sizing
 // ambiguity that was causing tiles to be clipped.
 function calcAvailableBoard() {
-  const totalH = window.innerHeight;
-  const totalW = window.innerWidth;
+  // visualViewport.height correctly excludes Safari's bottom address bar.
+  // Falls back to window.innerHeight for Firefox.
+  const totalH = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+  const totalW = (window.visualViewport ? window.visualViewport.width  : window.innerWidth);
   // Measure actual rendered heights of every non-board element
   const topBar    = document.querySelector('.top-bar');
   const trayWrap  = document.querySelector('.tray-section');
@@ -997,7 +1020,7 @@ function refreshClickHandlers() {
 function checkWin() {
   if (G.matchedPairs >= G.totalPairs) {
     stopTimer();
-    const elapsed = Math.floor((Date.now() - G.startTime) / 1000);
+    const elapsed = getElapsedSeconds();
     showWin(elapsed);
     return;
   }
@@ -1044,15 +1067,44 @@ function checkPowerupAward() {
 }
 
 // ══════════════════════════════════════════════════
-//  TIMER
+//  TIMER  — live ticking display updated every second
 // ══════════════════════════════════════════════════
 function startTimer() {
   stopTimer();
-  G.startTime = Date.now();
-  G.timerInterval = setInterval(() => {}, 1000);
+  G.startTime    = Date.now();
+  G.elapsedAtPause = 0;  // reset accumulated pause time
+  G.timerInterval = setInterval(tickTimer, 500); // 500ms for snappy display
+  tickTimer();
 }
+
+function pauseTimer() {
+  if (G.timerInterval) {
+    clearInterval(G.timerInterval);
+    G.timerInterval = null;
+    // Accumulate elapsed so far
+    G.elapsedAtPause += Date.now() - G.startTime;
+  }
+}
+
+function resumeTimer() {
+  if (!G.timerInterval) {
+    G.startTime = Date.now(); // reset start to now; elapsedAtPause holds history
+    G.timerInterval = setInterval(tickTimer, 500);
+    tickTimer();
+  }
+}
+
 function stopTimer() {
   if (G.timerInterval) { clearInterval(G.timerInterval); G.timerInterval = null; }
+}
+
+function tickTimer() {
+  const elapsed = Math.floor((G.elapsedAtPause + Date.now() - G.startTime) / 1000);
+  document.getElementById('level-timer').textContent = fmtTime(elapsed);
+}
+
+function getElapsedSeconds() {
+  return Math.floor((G.elapsedAtPause + Date.now() - G.startTime) / 1000);
 }
 
 // ══════════════════════════════════════════════════
@@ -1130,8 +1182,8 @@ let particles = [];
 let animFrame = null;
 
 function resizeCanvas() {
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width  = window.visualViewport ? window.visualViewport.width  : window.innerWidth;
+  canvas.height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
@@ -1173,7 +1225,6 @@ function animateParticles() {
 //  UI
 // ══════════════════════════════════════════════════
 function updateUI() {
-  document.getElementById('level-label').textContent  = `Level ${G.level}`;
   document.getElementById('title-level').textContent  = `Level ${G.level}`;
   const pct = G.totalPairs > 0 ? (G.matchedPairs/G.totalPairs)*100 : 0;
   document.getElementById('progress-fill').style.width = pct+'%';
@@ -1253,14 +1304,12 @@ function showToast(msg) {
 // ══════════════════════════════════════════════════
 document.getElementById('start-btn').addEventListener('click', () => startLevel(G.level));
 document.getElementById('pause-btn').addEventListener('click', () => {
-  stopTimer();
+  pauseTimer();
   document.getElementById('pause-overlay').classList.remove('hidden');
 });
 document.getElementById('resume-btn').addEventListener('click', () => {
-  G.startTime = Date.now() - (G.startTime > 0 ? 0 : 0); // resume — recalc on next win
-  G.startTime = Date.now() - (Date.now() - G.startTime);
   document.getElementById('pause-overlay').classList.add('hidden');
-  startTimer();
+  resumeTimer();
 });
 document.getElementById('pause-restart-btn').addEventListener('click', () => startLevel(G.level));
 document.getElementById('pause-menu-btn').addEventListener('click', () => {
@@ -1283,17 +1332,20 @@ document.getElementById('btn-hint').addEventListener('click', () => { if (!docum
 document.getElementById('btn-shuffle').addEventListener('click', () => { if (!document.getElementById('btn-shuffle').classList.contains('disabled')) useShuffle(); });
 document.getElementById('btn-undo').addEventListener('click', () => { if (!document.getElementById('btn-undo').classList.contains('disabled')) useUndo(); });
 
-// Fix pause resume timer
-document.getElementById('resume-btn').addEventListener('click', () => {}, {once:false});
-
 let _rt;
-window.addEventListener('resize', () => {
+function onResize() {
   clearTimeout(_rt);
   _rt = setTimeout(() => {
     resizeCanvas();
     if (!document.getElementById('game-screen').classList.contains('hidden')) renderBoard();
-  }, 150);
-});
+  }, 120);
+}
+// Standard resize (covers Firefox, window resizes)
+window.addEventListener('resize', onResize);
+// visualViewport fires in Safari when the bottom address bar appears/disappears
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', onResize);
+}
 
 // ══════════════════════════════════════════════════
 //  INIT
