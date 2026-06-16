@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Shui Pai">
-<meta name="theme-color" content="#0d1117">
+<meta name="theme-color" content="#181f2b">
 <title>水牌 Shui Pai</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -21,7 +21,7 @@
 
 /* ═══ THEMES ═══ */
 :root {
-  --bg:               #0d1117;
+  --bg:               #181f2b;
   --paper:            #e8dcc8;
   --paper-dim:        #9a8e78;
   --red:              #c0392b;
@@ -84,7 +84,12 @@ body {
   width: 100%;
   height: 100dvh;
   height: 100%;
-  background: var(--bg);
+  /* Base bg + tiled wave pattern overlay.
+     SVG encodes a classic seigaiha-inspired arc wave in the tray fill color (#1e2a42)
+     at very low opacity so it reads as subtle texture, not wallpaper. */
+  background-color: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='36'%3E%3Cg fill='none' stroke='%231e2a42' stroke-width='1.2'%3E%3C!-- bottom arc row --%3E%3Cellipse cx='0'  cy='36' rx='30' ry='18'/%3E%3Cellipse cx='60' cy='36' rx='30' ry='18'/%3E%3C!-- top arc row (offset half a cell) --%3E%3Cellipse cx='30' cy='18' rx='30' ry='18'/%3E%3C!-- inner detail arcs for layered depth --%3E%3Cellipse cx='0'  cy='36' rx='22' ry='13'/%3E%3Cellipse cx='60' cy='36' rx='22' ry='13'/%3E%3Cellipse cx='30' cy='18' rx='22' ry='13'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 60px 36px;
   font-family: 'Noto Sans SC', sans-serif;
   color: var(--paper); overflow: hidden;
   touch-action: manipulation;
@@ -191,7 +196,8 @@ body {
 .tray-slot-bg {
   position: absolute; inset: 0;
   background: var(--tray-bg); border: 1.5px dashed var(--tray-border);
-  border-radius: var(--radius); display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
 }
 .tray-slot-num { font-size: 10px; color: var(--tray-border); opacity: 0.4; }
 .tray-tile { position: absolute; inset: 0; }
@@ -735,18 +741,17 @@ function calcAvailableBoard() {
 }
 
 function calcTileSize() {
-  const { availW, availH } = calcAvailableBoard();
+  // Use the board-wrapper's actual client dimensions.
+  // visualViewport drives the resize events so by the time this runs
+  // the wrapper has already been sized correctly by the browser.
+  const wr = document.querySelector('.board-wrapper');
+  const wW = wr.clientWidth  - 20;
+  const wH = wr.clientHeight - 12;
   const maxL  = G.tiles.reduce((m,t) => Math.max(m,t.layer), 0);
   const bleed = maxL * (EDGE + 4);
-  // 2:3 ratio: tileH = tileW * 3/2
-  // Fit cols across availW:  tileW * cols + GAP*(cols-1) + bleed <= availW
-  //   => tileW <= (availW - GAP*(cols-1) - bleed) / cols
-  // Fit rows down availH:   tileH * rows + GAP*(rows-1) + bleed <= availH
-  //   tileH = tileW*1.5  => tileW <= (availH - GAP*(rows-1) - bleed) / (rows * 1.5)
-  const effectiveCols = G.cols + maxL * 0.5;
-  const effectiveRows = G.rows + maxL * 0.5;
-  const byW = Math.floor((availW - bleed - GAP*(effectiveCols-1)) / effectiveCols);
-  const byH = Math.floor((availH - bleed - GAP*(effectiveRows-1)) / effectiveRows / 1.5);
+  // 2:3 ratio (width:height): tileH = tileW * 3/2
+  const byW = Math.floor((wW - bleed) / (G.cols + 0.5 + maxL * 0.5));
+  const byH = Math.floor((wH - bleed) / (G.rows + 0.5 + maxL * 0.5) * 2 / 3);
   return Math.max(14, Math.min(byW, byH));
 }
 
@@ -816,12 +821,15 @@ function renderTray() {
   const slotH = Math.floor(slotW * 3 / 2);
   const symS  = Math.max(7, Math.floor(slotW * 0.42));
   const crnS  = Math.max(4, Math.floor(slotW * 0.16));
+  // Scale border-radius proportionally to slot size so empty slots look like mini tiles
+  const slotRadius = Math.max(4, Math.round(12 * slotW / 44));
   for (let i = 0; i < 4; i++) {
     const slot = document.createElement('div');
     slot.className = 'tray-slot';
     slot.style.width = slotW+'px'; slot.style.height = slotH+'px';
     const bg = document.createElement('div');
     bg.className = 'tray-slot-bg';
+    bg.style.borderRadius = slotRadius + 'px';
     bg.innerHTML = `<span class="tray-slot-num">${i+1}</span>`;
     slot.appendChild(bg);
     const item = G.tray[i];
@@ -830,7 +838,7 @@ function renderTray() {
       const tt = document.createElement('div');
       tt.className = 'tray-tile';
       tt.innerHTML = `
-        <div class="t-face">
+        <div class="t-face" style="border-radius:${slotRadius}px">
           <span class="tile-corner" style="font-size:${crnS}px">${def.corner}</span>
           <span class="tile-symbol${def.red?' red-sym':''}" style="font-size:${symS}px">${def.sym}</span>
         </div>
