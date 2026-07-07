@@ -1,7 +1,7 @@
- const CACHE = 'shuipai-v3';   // still bump this if you ever change the ASSETS list
+const CACHE = 'shuipai-v4';   // still bump this if you ever change the ASSETS list
 const ASSETS = [
-  '/index.html',
-  '/manifest.json',
+  './index.html',
+  './manifest.json',
   'https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;700&family=Noto+Sans+SC:wght@300;400&display=swap'
 ];
 
@@ -35,7 +35,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE).then(c => c.put(req, clone)); // keep a fresh offline copy
           return res;
         })
-        .catch(() => caches.match(req).then(r => r || caches.match('/index.html')))
+        .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
     );
     return;
   }
