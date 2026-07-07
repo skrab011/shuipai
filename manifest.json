@@ -1,0 +1,17 @@
+{
+  "name": "Shui Pái — Tile Matching",
+  "short_name": "水牌",
+  "description": "An ink-and-paper tile matching game",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#1a1208",
+  "theme_color": "#1a1208",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%231a1208'/><text x='96' y='140' font-size='120' text-anchor='middle' fill='%23f0e8d5' font-family='serif'>水</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
